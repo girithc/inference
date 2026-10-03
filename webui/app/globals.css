@@ -1,0 +1,458 @@
+:root {
+  color-scheme: light dark;
+  --background: #f5f5f2;
+  --surface: #ffffff;
+  --surface-muted: #f0f0ed;
+  --text: #171717;
+  --muted: #666666;
+  --border: #d8d8d2;
+  --accent: #111111;
+  --accent-text: #ffffff;
+  --focus: #0f62fe;
+  --success: #12805c;
+  --error: #b42318;
+  --code: #f5f5f4;
+  --dot-1: rgba(23, 23, 23, 0.10);
+  --dot-2: rgba(23, 23, 23, 0.06);
+  --dot-3: rgba(23, 23, 23, 0.035);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0d0d0d;
+    --surface: #171717;
+    --surface-muted: #202020;
+    --text: #f4f4f4;
+    --muted: #a1a1a1;
+    --border: #333333;
+    --accent: #f4f4f4;
+    --accent-text: #111111;
+    --focus: #78a9ff;
+    --success: #75e0b4;
+    --error: #ff9d92;
+    --code: #101010;
+    --dot-1: rgba(244, 244, 244, 0.13);
+    --dot-2: rgba(244, 244, 244, 0.08);
+    --dot-3: rgba(244, 244, 244, 0.045);
+  }
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  min-height: 100%;
+  background-color: var(--background);
+  background-image:
+    radial-gradient(var(--dot-1) 1px, transparent 1.2px),
+    radial-gradient(var(--dot-2) 1px, transparent 1.2px),
+    radial-gradient(var(--dot-3) 1px, transparent 1.2px);
+  background-size: 10px 10px, 16px 16px, 24px 24px;
+  background-position: 0 0, 4px 5px, 9px 11px;
+  background-repeat: repeat;
+  color: var(--text);
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--accent);
+  color: var(--accent-text);
+  cursor: pointer;
+  min-height: 36px;
+  padding: 0 14px;
+}
+
+button:hover {
+  filter: brightness(1.08);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+button.secondary {
+  background: var(--surface);
+  color: var(--text);
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+a:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  padding: 14px 32px 14px 20px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.brand-mark {
+  width: 12px;
+  height: 12px;
+  border: 3px solid var(--text);
+}
+
+.catalog {
+  padding: 24px 20px 40px;
+}
+
+.catalog-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 16px;
+}
+
+.catalog-header h1 {
+  font-size: 24px;
+}
+
+.catalog-header p {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.search-label {
+  display: block;
+  width: 280px;
+}
+
+#model-search {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  padding: 10px 12px;
+}
+
+.model-list {
+  display: block;
+  border: 1px solid var(--border);
+  border-top: 0;
+  background: var(--surface);
+}
+
+.model-card {
+  display: block;
+  background: var(--surface);
+}
+
+.model-card + .model-card {
+  border-top: 1px solid var(--border);
+}
+
+.model-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  width: 100%;
+  min-height: 60px;
+  background: transparent;
+  color: var(--text);
+  padding: 0;
+  text-align: left;
+}
+
+.model-header:hover {
+  background: transparent;
+}
+
+.concept-button:hover,
+.concept-button[aria-expanded="true"] {
+  background: var(--surface-muted);
+}
+
+.model-name {
+  display: flex;
+  align-items: center;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 0 16px;
+}
+
+.model-actions {
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+}
+
+.concept-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  border: 0;
+  border-left: 1px solid var(--border);
+  background: var(--surface);
+  color: inherit;
+  min-height: auto;
+  padding: 0 16px;
+  font-weight: 400;
+}
+
+.model-panel {
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.request-response-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: stretch;
+}
+
+.request-column,
+.response-column {
+  display: grid;
+  grid-template-rows: 72px minmax(480px, 1fr) 64px;
+  height: 100%;
+}
+
+.response-column {
+  position: relative;
+}
+
+.request-column {
+  border-right: 1px solid var(--border);
+}
+
+.panel-column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  padding: 10px 12px;
+}
+
+.panel-column-header h2 {
+  font-size: 13px;
+}
+
+.shortcut {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.response-header-meta {
+  display: flex;
+  align-items: center;
+}
+
+.curl-editor {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 480px;
+  border: 0;
+  background: var(--code);
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 12px;
+  resize: none;
+}
+
+.curl-editor:focus,
+.architecture-editor:focus,
+.kernel-editor:focus {
+  outline: none;
+}
+
+.architecture-panel,
+.kernel-panel {
+  display: grid;
+  grid-template-rows: minmax(480px, 1fr);
+}
+
+.architecture-editor,
+.kernel-editor {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 480px;
+  border: 0;
+  background: var(--code);
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 12px;
+  resize: none;
+}
+
+.editor-actions {
+  display: flex;
+  align-items: center;
+  height: 64px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0 8px;
+}
+
+.editor-actions .run {
+  width: 100%;
+  border-radius: 8px;
+}
+
+.state {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+.state.running {
+  border-color: var(--text);
+}
+
+.state.success {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.state.error {
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.metric {
+  color: var(--muted);
+  font-size: 12px;
+  padding-right: 10px;
+}
+
+.metric + .metric {
+  padding-left: 10px;
+  border-left: 1px solid var(--border);
+}
+
+.output-text,
+.raw-response pre {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.output-text {
+  height: 100%;
+  min-height: 480px;
+  overflow: auto;
+  background: var(--surface-muted);
+  padding: 12px;
+}
+
+.raw-response {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 64px;
+  overflow: hidden;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  z-index: 1;
+}
+
+.raw-response[open] {
+  height: auto;
+  min-height: 64px;
+  max-height: 33.333%;
+  overflow: auto;
+}
+
+.raw-response summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 10px 12px;
+}
+
+.raw-response pre {
+  overflow: auto;
+  background: var(--code);
+  padding: 12px;
+}
+
+.empty-state {
+  color: var(--muted);
+  text-align: center;
+  padding-top: 28px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .request-response-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .request-column {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+}
+
+@media (max-width: 720px) {
+  .catalog-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .search-label {
+    width: 100%;
+    padding-top: 12px;
+  }
+}
