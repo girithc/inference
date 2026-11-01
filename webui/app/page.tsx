@@ -148,6 +148,12 @@ function TreeRows({
   );
 }
 
+const letterOf = (code: string): string => {
+  const c = code.trim();
+  if (c.startsWith("??")) return "U";
+  return c.charAt(0) || "M";
+};
+
 export default function Workspace() {
   const [repo, setRepo] = useState("");
   const [tree, setTree] = useState<TreeItem[]>([]);
@@ -539,19 +545,30 @@ export default function Workspace() {
                   GH ↗
                 </a>
               </div>
-              <div className="file-list">
-                {gitEntries.map((e) => (
-                  <button
-                    key={e.code + e.path}
-                    type="button"
-                    className="file-item"
-                    style={{ paddingLeft: 10 }}
-                    onClick={() => openFile(e.path)}
-                  >
-                    <span className="git-code">{e.code.trim() || "M"}</span>
-                    {e.path}
-                  </button>
-                ))}
+              <div className="file-list sc-list">
+                <div className="sc-section">
+                  CHANGES
+                  <span className="sc-badge">{gitEntries.length}</span>
+                </div>
+                {gitEntries.map((e) => {
+                  const letter = letterOf(e.code);
+                  const slash = e.path.lastIndexOf("/");
+                  const name = slash === -1 ? e.path : e.path.slice(slash + 1);
+                  const dir = slash === -1 ? "" : e.path.slice(0, slash);
+                  return (
+                    <button
+                      key={e.code + e.path}
+                      type="button"
+                      className={`sc-row ${sel === e.path ? "sel" : ""}`.trim()}
+                      onClick={() => openFile(e.path)}
+                      title={e.path}
+                    >
+                      <span className="sc-name">{name}</span>
+                      <span className="sc-dir">{dir}</span>
+                      <span className={`sc-letter sc-${letter}`}>{letter}</span>
+                    </button>
+                  );
+                })}
               </div>
               <div className="git-actions">
                 <button

@@ -311,14 +311,107 @@ textarea {
   color: var(--paper);
 }
 
-.git-code {
+/* (git-code badge replaced by vscode-style sc rows) */
+
+/* vscode-style source control rows */
+
+.sc-list {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.sc-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px 6px;
   font-family: var(--font-mono);
-  font-size: 9px;
-  border: 1px solid currentColor;
-  padding: 2px 4px;
-  margin-right: 8px;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
   flex: none;
+}
+
+.sc-badge {
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 9px;
   line-height: 1;
+  padding: 3px 5px;
+}
+
+.sc-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  padding: 5px 10px;
+  font-family: var(--font-grotesk);
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.sc-row:hover {
+  background: var(--paper-dim);
+}
+
+.sc-row.sel {
+  background: var(--ink);
+}
+
+.sc-row.sel .sc-name,
+.sc-row.sel .sc-dir,
+.sc-row.sel .sc-letter {
+  color: var(--paper);
+}
+
+.sc-name {
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 0 1 auto;
+}
+
+.sc-dir {
+  color: var(--ink-faint);
+  font-size: 11px;
+  margin-left: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 0 1 auto;
+}
+
+.sc-letter {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  flex: none;
+  width: 12px;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+.sc-letter.sc-M {
+  color: var(--orange);
+  font-weight: 500;
+}
+
+.sc-letter.sc-U,
+.sc-letter.sc-A {
+  color: var(--ink);
+}
+
+.sc-letter.sc-D {
+  color: var(--ink-faint);
+  text-decoration: line-through;
 }
 
 .git-status-row {
