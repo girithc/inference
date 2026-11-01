@@ -180,51 +180,23 @@ textarea {
   border-color: var(--ink);
 }
 
-/* ---------- top bar (difference ink) ---------- */
+/* ---------- brand / title row ---------- */
 
-.topbar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 50;
-  display: flex;
+.brand {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 14px 20px;
-  mix-blend-mode: difference;
-  color: #ffffff;
-}
-
-.topbar a {
-  color: #ffffff;
-}
-
-.topbar-brand {
+  gap: 2px;
   font-family: var(--font-grotesk);
   font-weight: 700;
-  font-size: 16px;
+  font-size: 14px;
   letter-spacing: 0.02em;
+  color: var(--ink);
+  white-space: nowrap;
 }
 
-.topbar-star {
+.spin-star {
   display: inline-block;
   animation: spin 9s linear infinite;
-}
-
-.topbar-cta {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  border: 1px solid #ffffff;
-  padding: 8px 12px;
-}
-
-.topbar-cta:hover {
-  background: #ffffff;
-  color: #000000;
 }
 
 /* ---------- status dot ---------- */
@@ -243,7 +215,6 @@ textarea {
   height: 100dvh;
   display: flex;
   flex-direction: column;
-  padding-top: 62px;
 }
 
 .ws {
@@ -631,7 +602,7 @@ textarea {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .topbar-star {
+  .spin-star {
     animation: none;
   }
 

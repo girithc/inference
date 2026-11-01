@@ -365,14 +365,17 @@ export default function Workspace() {
         {/* ---------------- files ---------------- */}
         <aside className="ws-files">
           <div className="pane-head">
-            <span>REPO — {repo || "…"}</span>
-            <button
-              type="button"
+            <span className="brand">
+              INFERENCE<span className="spin-star orange-text" aria-hidden="true">✳</span> STUDIO
+            </span>
+            <a
               className="kill"
-              onClick={leftView === "FILES" ? refreshTree : loadGit}
+              href="https://github.com/girithc/inference"
+              target="_blank"
+              rel="noreferrer"
             >
-              SYNC
-            </button>
+              GH ↗
+            </a>
           </div>
 
           <div className="seg-row">
