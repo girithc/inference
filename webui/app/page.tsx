@@ -168,7 +168,8 @@ export default function Workspace() {
     '{\n  "messages": [{ "role": "user", "content": "Say hi in five words." }]\n}',
   );
   const [testOut, setTestOut] = useState("");
-  const [aiOut, setAiOut] = useState("");
+  const [aiResults, setAiResults] = useState<Array<{ id: string; path: string; text: string }>>([]);
+  const [aiOpenId, setAiOpenId] = useState<string | null>(null);
   const [dockOpen, setDockOpen] = useState(false);
   const [dockTab, setDockTab] = useState<DockTab>("TERMINAL");
   const [leftView, setLeftView] = useState<"FILES" | "GIT" | "AI">("FILES");
@@ -396,7 +397,6 @@ export default function Workspace() {
   const analyze = async () => {
     if (!sel || busy === "ai") return;
     setBusy("ai");
-    setAiOut("");
     try {
       const res = await fetch("/api/ai/analyze", {
         method: "POST",
@@ -404,9 +404,17 @@ export default function Workspace() {
         body: JSON.stringify({ path: sel, content: draft }),
       });
       const data = await res.json();
-      setAiOut(data.error ? `[ERROR] ${data.error}` : data.text);
+      const id = `${Date.now()}`;
+      const text = data.error ? `[ERROR] ${data.error}` : data.text;
+      setAiResults((prev) => [{ id, path: sel, text }, ...prev]);
+      setAiOpenId(id);
     } catch (err) {
-      setAiOut(`[ERROR] ${err instanceof Error ? err.message : "failed"}`);
+      const id = `${Date.now()}`;
+      setAiResults((prev) => [
+        { id, path: sel, text: `[ERROR] ${err instanceof Error ? err.message : "failed"}` },
+        ...prev,
+      ]);
+      setAiOpenId(id);
     } finally {
       setBusy(null);
     }
@@ -485,7 +493,31 @@ export default function Workspace() {
               >
                 {busy === "ai" ? "ANALYZING…" : "ANALYZE"}
               </button>
-              <pre className="ai-out">{aiOut || "$ — ANALYSIS PRINTS HERE"}</pre>
+              <div className="ai-list">
+                {aiResults.map((r, i) => (
+                  <div key={r.id} className="ai-item">
+                    <button
+                      type="button"
+                      className="file-item ai-row"
+                      style={{ paddingLeft: 10 }}
+                      onClick={() => setAiOpenId(aiOpenId === r.id ? null : r.id)}
+                      aria-expanded={aiOpenId === r.id}
+                      title={r.path}
+                    >
+                      <span
+                        className={`caret ${aiOpenId === r.id ? "open" : ""}`.trim()}
+                        aria-hidden="true"
+                      >
+                        {">"}
+                      </span>
+                      <span className="ai-row-label">
+                        {String(i + 1).padStart(2, "0")} — {r.path.split("/").pop()}
+                      </span>
+                    </button>
+                    {aiOpenId === r.id && <p className="ai-text">{r.text}</p>}
+                  </div>
+                ))}
+              </div>
             </div>
           ) : leftView === "FILES" ? (
             <div className="file-list">
