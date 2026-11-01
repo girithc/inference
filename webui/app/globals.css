@@ -752,8 +752,8 @@ textarea {
 }
 
 :is(.file-list, .ai-list, .cm-scroller, .console)::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
+  width: 4px;
+  height: 4px;
 }
 
 :is(.file-list, .ai-list, .cm-scroller, .console)::-webkit-scrollbar-track {
