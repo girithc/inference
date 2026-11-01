@@ -365,6 +365,17 @@ export default function Workspace() {
         {/* ---------------- files ---------------- */}
         <aside className="ws-files">
           <div className="pane-head">
+            <span>REPO — {repo || "…"}</span>
+            <button
+              type="button"
+              className="kill"
+              onClick={leftView === "FILES" ? refreshTree : loadGit}
+            >
+              SYNC
+            </button>
+          </div>
+
+          <div className="seg-row">
             <div className="seg-mini" role="tablist">
               <button
                 type="button"
@@ -384,13 +395,6 @@ export default function Workspace() {
                 SOURCE CONTROL
               </button>
             </div>
-            <button
-              type="button"
-              className="kill"
-              onClick={leftView === "FILES" ? refreshTree : loadGit}
-            >
-              SYNC
-            </button>
           </div>
 
           {leftView === "FILES" ? (

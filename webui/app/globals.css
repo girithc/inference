@@ -286,6 +286,22 @@ textarea {
   background: var(--ink) !important;
 }
 
+.seg-row {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--ink);
+  flex: none;
+}
+
+.seg-row .seg-mini {
+  width: 100%;
+}
+
+.seg-row .seg-mini button {
+  flex: 1;
+  padding: 8px 9px;
+  font-size: 10px;
+}
+
 .seg-mini {
   display: flex;
   border: 1px solid var(--ink);
