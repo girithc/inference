@@ -597,36 +597,32 @@ textarea {
   min-height: 0;
   overflow: hidden;
   border-bottom: 1px solid var(--ink);
+  display: flex;
+  flex-direction: column;
+}
+
+/* the react-codemirror wrapper div — must be height-bounded for % heights to work */
+.editor-wrap > div {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .editor-wrap .cm-editor {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   background: transparent;
+}
+
+.editor-wrap .cm-scroller {
+  overflow: auto !important;
 }
 
 .editor-wrap .cm-gutters {
   background: transparent;
-  border-right: 1px solid var(--hairline);
+  border: none;
   color: var(--ink-faint);
-}
-
-.editor-wrap .cm-activeLine {
-  background: rgba(255, 77, 0, 0.06);
-}
-
-.editor-wrap .cm-activeLineGutter {
-  background: var(--paper-dim);
-  color: var(--orange);
-}
-
-.editor-actions {
-  display: flex;
-  gap: 10px;
-  padding: 12px 16px;
-}
-
-.editor-actions .btn {
-  width: 100%;
 }
 
 /* actions column → dock */
