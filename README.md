@@ -11,14 +11,8 @@ Serving open models on Modal. One-command GPU deployments for:
 
 ## Web playground
 
-A Next.js TypeScript model-first web UI is available in [`webui/`](./webui/README.md). Each model row has **architecture**, **playground**, and **kernels** concept buttons: architecture opens a model architecture code editor, playground opens a cURL request editor, and kernels opens an editable Triton kernel code editor. Run it locally with:
+## Web playground
 
-```bash
-cd webui
-npm install
-npm run dev
-```
-
-Then open `http://localhost:3000`, select a model, edit its sample cURL request, and run it from the request editor.
+A Next.js TypeScript web UI is available in [`webui/`](./webui/README.md) with four views: **inference** (a rate-sheet catalog of small LLMs), **post-training** (fine-tuning jobs on a live ledger), a **playground** (single / A·B quality testing with real metrics), and a **stack** composer (engine, quantization, kernels — with estimates and a generated config). Print-inspired editorial theme: bone paper / ink / international orange, sharp edges, no radius.
 
 Work in progress — I'm building it out piece by piece. Check back soon.

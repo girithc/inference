@@ -3,3 +3,6 @@
 /out
 *.tsbuildinfo
 .DS_Store
+
+# local-only, too large for git
+Fundraising Deck.pdf
