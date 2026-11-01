@@ -482,9 +482,6 @@ export default function Workspace() {
 
           {leftView === "AI" ? (
             <div className="ai-pane">
-              <div className="field-note">
-                {sel ?? "NO FILE OPEN — PICK ONE UNDER FILES"}
-              </div>
               <button
                 type="button"
                 className="btn btn-mini"
