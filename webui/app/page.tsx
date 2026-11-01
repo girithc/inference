@@ -417,7 +417,7 @@ export default function Workspace() {
               <div className="file-list">
                 {gitEntries.length === 0 ? (
                   <div className="field-note" style={{ padding: 12 }}>
-                    {gitBusy === "status" ? "READING…" : "WORKING TREE CLEAN — ALL CHANGES PUSHED"}
+                    {gitBusy === "status" ? "READING…" : "WORKING TREE CLEAN"}
                   </div>
                 ) : (
                   gitEntries.map((e) => (

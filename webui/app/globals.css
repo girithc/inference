@@ -221,7 +221,8 @@ textarea {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: fit-content(300px) minmax(0, 1fr);
+  /* fixed width so FILES and SOURCE CONTROL share the same column */
+  grid-template-columns: 300px minmax(0, 1fr);
 }
 
 .pane-head {
