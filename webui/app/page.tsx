@@ -1,10 +1,109 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import CodeMirror from "@uiw/react-codemirror";
 import { python } from "@codemirror/lang-python";
 
 type TreeItem = { path: string; size: number };
+
+type TreeNode = {
+  name: string;
+  path: string;
+  isDir: boolean;
+  children: TreeNode[];
+};
+
+function buildTree(items: TreeItem[]): TreeNode[] {
+  const root: TreeNode = { name: "", path: "", isDir: true, children: [] };
+  for (const item of items) {
+    const parts = item.path.split("/");
+    let cur = root;
+    parts.forEach((part, i) => {
+      const isDir = i < parts.length - 1;
+      let next = cur.children.find((c) => c.name === part && c.isDir === isDir);
+      if (!next) {
+        next = { name: part, path: parts.slice(0, i + 1).join("/"), isDir, children: [] };
+        cur.children.push(next);
+      }
+      cur = next;
+    });
+  }
+  const sort = (nodes: TreeNode[]): TreeNode[] => {
+    nodes.sort((a, b) =>
+      a.isDir === b.isDir ? a.name.localeCompare(b.name) : a.isDir ? -1 : 1,
+    );
+    for (const n of nodes) sort(n.children);
+    return nodes;
+  };
+  return sort(root.children);
+}
+
+function dirPaths(nodes: TreeNode[], acc: string[] = []): string[] {
+  for (const n of nodes) {
+    if (n.isDir) {
+      acc.push(n.path);
+      dirPaths(n.children, acc);
+    }
+  }
+  return acc;
+}
+
+function TreeRows({
+  nodes,
+  depth,
+  open,
+  onToggle,
+  sel,
+  onOpen,
+}: {
+  nodes: TreeNode[];
+  depth: number;
+  open: Set<string>;
+  onToggle: (path: string) => void;
+  sel: string | null;
+  onOpen: (path: string) => void;
+}) {
+  return (
+    <>
+      {nodes.map((node) =>
+        node.isDir ? (
+          <div key={node.path}>
+            <button
+              type="button"
+              className="file-item dir"
+              style={{ paddingLeft: 14 + depth * 12 }}
+              onClick={() => onToggle(node.path)}
+              aria-expanded={open.has(node.path)}
+            >
+              <i className={`caret ${open.has(node.path) ? "open" : ""}`.trim()} aria-hidden="true" />
+              {node.name}
+            </button>
+            {open.has(node.path) && (
+              <TreeRows
+                nodes={node.children}
+                depth={depth + 1}
+                open={open}
+                onToggle={onToggle}
+                sel={sel}
+                onOpen={onOpen}
+              />
+            )}
+          </div>
+        ) : (
+          <button
+            key={node.path}
+            type="button"
+            className={`file-item mono ${sel === node.path ? "sel" : ""}`.trim()}
+            style={{ paddingLeft: 14 + depth * 12 + 16 }}
+            onClick={() => onOpen(node.path)}
+          >
+            {node.name}
+          </button>
+        ),
+      )}
+    </>
+  );
+}
 
 export default function Workspace() {
   const [repo, setRepo] = useState("");
@@ -30,6 +129,23 @@ export default function Workspace() {
 
   const logsAbort = useRef<AbortController | null>(null);
   const dirty = sel !== null && draft !== saved;
+
+  const treeData = useMemo(() => buildTree(tree), [tree]);
+  const allDirs = useMemo(() => dirPaths(treeData), [treeData]);
+  const [openDirs, setOpenDirs] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    // expand everything by default; collapsing is the reader's choice
+    setOpenDirs(new Set(allDirs));
+  }, [allDirs]);
+
+  const toggleDir = (path: string) =>
+    setOpenDirs((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
 
   const refreshTree = useCallback(async () => {
     setTreeErr(null);
@@ -187,21 +303,19 @@ export default function Workspace() {
         <div className="pane-head">
           <span>REPO — {repo || "…"}</span>
           <button type="button" className="kill" onClick={refreshTree}>
-            ⟳
+            SYNC
           </button>
         </div>
         <div className="file-list">
           {treeErr ? <p className="field-note" style={{ padding: 12 }}>{treeErr}</p> : null}
-          {tree.map((item) => (
-            <button
-              key={item.path}
-              type="button"
-              className={`file-item mono ${sel === item.path ? "sel" : ""}`.trim()}
-              onClick={() => openFile(item.path)}
-            >
-              {item.path}
-            </button>
-          ))}
+          <TreeRows
+            nodes={treeData}
+            depth={0}
+            open={openDirs}
+            onToggle={toggleDir}
+            sel={sel}
+            onOpen={openFile}
+          />
         </div>
       </aside>
 
@@ -209,7 +323,12 @@ export default function Workspace() {
       <section className="ws-editor">
         <div className="pane-head">
           <span>{sel ?? "OPEN A FILE FROM THE REPO"}</span>
-          <span className={dirty ? "orange-text" : ""}>{dirty ? "● UNSAVED" : sel ? "✓ SYNCED" : ""}</span>
+          {sel ? (
+            <span className={`ws-state ${dirty ? "orange-text" : ""}`.trim()}>
+              <i className={`sq-dot ${dirty ? "" : "sq-ink"}`.trim()} aria-hidden="true" />
+              {dirty ? "UNSAVED" : "SYNCED"}
+            </span>
+          ) : null}
         </div>
         {sel ? (
           <>
@@ -287,7 +406,7 @@ export default function Workspace() {
                 onClick={followLogs}
                 disabled={!logApp}
               >
-                {following ? "■ STOP" : "▶ FOLLOW"}
+                {following ? "STOP" : "FOLLOW"}
               </button>
             </div>
           </div>
