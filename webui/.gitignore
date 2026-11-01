@@ -6,3 +6,6 @@
 
 # local-only, too large for git
 Fundraising Deck.pdf
+
+# secrets
+.env*.local

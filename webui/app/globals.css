@@ -336,6 +336,35 @@ textarea {
   min-height: 0;
 }
 
+.ai-pane {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+}
+
+.ai-pane .btn {
+  flex: none;
+  align-self: flex-start;
+}
+
+.ai-out {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--ink);
+  padding: 10px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  background: var(--paper-dim);
+}
+
 /* files */
 
 .ws-files {

@@ -168,6 +168,7 @@ export default function Workspace() {
     '{\n  "messages": [{ "role": "user", "content": "Say hi in five words." }]\n}',
   );
   const [testOut, setTestOut] = useState("");
+  const [aiOut, setAiOut] = useState("");
   const [dockOpen, setDockOpen] = useState(false);
   const [dockTab, setDockTab] = useState<DockTab>("TERMINAL");
   const [leftView, setLeftView] = useState<"FILES" | "GIT" | "AI">("FILES");
@@ -392,6 +393,25 @@ export default function Workspace() {
     }
   };
 
+  const analyze = async () => {
+    if (!sel || busy === "ai") return;
+    setBusy("ai");
+    setAiOut("");
+    try {
+      const res = await fetch("/api/ai/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: sel, content: draft }),
+      });
+      const data = await res.json();
+      setAiOut(data.error ? `[ERROR] ${data.error}` : data.text);
+    } catch (err) {
+      setAiOut(`[ERROR] ${err instanceof Error ? err.message : "failed"}`);
+    } finally {
+      setBusy(null);
+    }
+  };
+
   useEffect(() => {
     return () => logsAbort.current?.abort();
   }, []);
@@ -453,7 +473,20 @@ export default function Workspace() {
           </div>
 
           {leftView === "AI" ? (
-            <div className="ai-blank" />
+            <div className="ai-pane">
+              <div className="field-note">
+                {sel ?? "NO FILE OPEN — PICK ONE UNDER FILES"}
+              </div>
+              <button
+                type="button"
+                className="btn btn-mini"
+                onClick={analyze}
+                disabled={!sel || busy === "ai"}
+              >
+                {busy === "ai" ? "ANALYZING…" : "ANALYZE"}
+              </button>
+              <pre className="ai-out">{aiOut || "$ — ANALYSIS PRINTS HERE"}</pre>
+            </div>
           ) : leftView === "FILES" ? (
             <div className="file-list">
               {treeErr ? <p className="field-note" style={{ padding: 12 }}>{treeErr}</p> : null}
