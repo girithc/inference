@@ -221,8 +221,10 @@ textarea {
   flex: 1;
   min-height: 0;
   display: grid;
-  /* fixed width so FILES and SOURCE CONTROL share the same column */
+  /* fixed width so FILES and SOURCE CONTROL share the same column;
+     minmax row clamps the editor so it scrolls in place */
   grid-template-columns: 250px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
 }
 
 .pane-head {

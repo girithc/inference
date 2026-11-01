@@ -3,6 +3,56 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import CodeMirror from "@uiw/react-codemirror";
 import { python } from "@codemirror/lang-python";
+import { EditorView } from "@codemirror/view";
+import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import { autocompletion } from "@codemirror/autocomplete";
+import { tags as t } from "@lezer/highlight";
+
+/* VS Code "Light+" token colors on bone paper */
+const vscodeTheme = EditorView.theme(
+  {
+    "&": { fontSize: "13px", backgroundColor: "transparent", height: "100%" },
+    ".cm-scroller": { overflow: "auto", fontFamily: "var(--font-mono)", lineHeight: "1.6" },
+    ".cm-content": { caretColor: "var(--orange)" },
+    ".cm-line": { padding: "0 10px" },
+    ".cm-gutters": {
+      backgroundColor: "transparent",
+      border: "none",
+      color: "var(--ink-faint)",
+      paddingRight: "10px",
+    },
+    ".cm-activeLine": { backgroundColor: "rgba(20, 18, 15, 0.045)" },
+    ".cm-activeLineGutter": { backgroundColor: "transparent", color: "var(--orange)" },
+    ".cm-foldGutter span": { color: "var(--ink-faint)" },
+    ".cm-selectionBackground": { backgroundColor: "rgba(255, 77, 0, 0.18) !important" },
+    ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--orange)" },
+    ".cm-tooltip": {
+      backgroundColor: "var(--paper)",
+      border: "1px solid var(--ink)",
+      fontFamily: "var(--font-mono)",
+      fontSize: "11px",
+    },
+    ".cm-tooltip-autocomplete ul li[aria-selected]": {
+      backgroundColor: "var(--ink)",
+      color: "var(--paper)",
+    },
+  },
+  { dark: false },
+);
+
+const vscodeHighlight = HighlightStyle.define([
+  { tag: t.comment, color: "#008000", fontStyle: "italic" },
+  { tag: [t.keyword, t.definitionKeyword, t.moduleKeyword, t.controlKeyword], color: "#af00db" },
+  { tag: [t.string, t.character, t.regexp], color: "#a31515" },
+  { tag: [t.number, t.bool, t.null, t.atom], color: "#098658" },
+  { tag: [t.definition(t.variableName), t.function(t.variableName), t.self], color: "#795e26" },
+  { tag: [t.variableName, t.propertyName, t.labelName], color: "#001080" },
+  { tag: [t.typeName, t.className, t.namespace], color: "#267f99" },
+  { tag: [t.operator, t.punctuation, t.separator, t.bracket], color: "#14120f" },
+  { tag: [t.meta, t.annotation], color: "#795e26" },
+  { tag: t.link, color: "#001080", textDecoration: "underline" },
+  { tag: t.invalid, color: "#e45649" },
+]);
 
 type TreeItem = { path: string; size: number };
 
@@ -198,6 +248,41 @@ export default function Workspace() {
   const logsAbort = useRef<AbortController | null>(null);
   const dirty = sel !== null && draft !== saved;
 
+  /* editor auto-save: edits hit the local disk (debounced); GitHub via source control */
+  const pendingWrite = useRef<{ path: string; content: string } | null>(null);
+  const writeTimer = useRef<number | null>(null);
+  const selRef = useRef(sel);
+  selRef.current = sel;
+
+  const flushWrite = useCallback(async () => {
+    const p = pendingWrite.current;
+    if (!p) return;
+    pendingWrite.current = null;
+    if (writeTimer.current) {
+      window.clearTimeout(writeTimer.current);
+      writeTimer.current = null;
+    }
+    try {
+      await fetch("/api/fs/write", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(p),
+      });
+      if (selRef.current === p.path) setSaved(p.content);
+    } catch {
+      /* disk write failed — draft stays, indicator shows UNSAVED */
+    }
+  }, []);
+
+  const onEditorChange = (v: string) => {
+    setDraft(v);
+    pendingWrite.current = { path: sel ?? "", content: v };
+    if (writeTimer.current) window.clearTimeout(writeTimer.current);
+    writeTimer.current = window.setTimeout(() => {
+      flushWrite();
+    }, 500);
+  };
+
   const treeData = useMemo(() => buildTree(tree), [tree]);
   const allDirs = useMemo(() => dirPaths(treeData), [treeData]);
   const [openDirs, setOpenDirs] = useState<Set<string>>(new Set());
@@ -233,7 +318,7 @@ export default function Workspace() {
   }, [refreshTree]);
 
   const openFile = async (path: string) => {
-    if (dirty && !window.confirm("Unsaved edits — open anyway?")) return;
+    if (pendingWrite.current && pendingWrite.current.path !== path) await flushWrite();
     setBusy(path);
     try {
       const res = await fetch(`/api/gh/file?path=${encodeURIComponent(path)}`);
@@ -321,17 +406,16 @@ export default function Workspace() {
 
   const deploy = async () => {
     if (!sel || deploying) return;
-    if (dirty && !window.confirm("Unsaved edits deploy the last saved version. Deploy anyway?"))
-      return;
     setDeploying(true);
     setDockOpen(true);
     setDockTab("TERMINAL");
+    await flushWrite(); // deploy exactly what the editor shows
     setDeployOut(`$ modal deploy ${sel}\n`);
     try {
       const res = await fetch("/api/modal/deploy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path: sel }),
+        body: JSON.stringify({ path: sel, content: draft }),
       });
       const reader = res.body!.getReader();
       const dec = new TextDecoder();
@@ -687,27 +771,29 @@ export default function Workspace() {
             ) : null}
           </div>
           {sel ? (
-            <>
-              <div className="editor-wrap">
-                <CodeMirror
-                  value={draft}
-                  height="100%"
-                  extensions={[python()]}
-                  onChange={(v) => setDraft(v)}
-                  basicSetup={{ lineNumbers: true, foldGutter: false, highlightActiveLine: true }}
-                />
-              </div>
-              <div className="editor-actions">
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={save}
-                  disabled={!dirty || busy === "save"}
-                >
-                  {busy === "save" ? "COMMITTING…" : "SAVE → LOCAL + GITHUB"}
-                </button>
-              </div>
-            </>
+            <div className="editor-wrap">
+              <CodeMirror
+                value={draft}
+                height="100%"
+                extensions={[python(), vscodeTheme, syntaxHighlighting(vscodeHighlight), autocompletion()]}
+                onChange={onEditorChange}
+                basicSetup={{
+                  lineNumbers: true,
+                  foldGutter: true,
+                  highlightActiveLine: true,
+                  highlightActiveLineGutter: true,
+                  closeBrackets: true,
+                  bracketMatching: true,
+                  indentOnInput: true,
+                  autocompletion: true,
+                  history: true,
+                  rectangularSelection: true,
+                  crosshairCursor: true,
+                  allowMultipleSelections: true,
+                  drawSelection: true,
+                }}
+              />
+            </div>
           ) : (
             <div className="empty-press">
               SELECT A FILE — EDIT — DEPLOY — WATCH LOGS

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { spawn } from "node:child_process";
+import fs from "node:fs/promises";
 import { REPO_ROOT, modalBin, safeRepoPath } from "@/lib/server";
 
 export const dynamic = "force-dynamic";
@@ -9,8 +10,13 @@ export const maxDuration = 300;
 export async function POST(req: NextRequest) {
   let rel: string;
   try {
-    ({ path: rel } = (await req.json()) as { path: string });
-    safeRepoPath(rel); // validate early
+    const body = (await req.json()) as { path: string; content?: string };
+    rel = body.path;
+    const abs = safeRepoPath(rel);
+    // deploy exactly what the editor holds — flush unsaved edits to disk first
+    if (typeof body.content === "string") {
+      await fs.writeFile(abs, body.content, "utf8");
+    }
   } catch {
     return NextResponse.json({ error: "valid repo path required" }, { status: 400 });
   }
