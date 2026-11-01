@@ -73,7 +73,7 @@ function TreeRows({
             <button
               type="button"
               className="file-item dir"
-              style={{ paddingLeft: 14 + depth * 12 }}
+              style={{ paddingLeft: 10 + depth * 8 }}
               onClick={() => onToggle(node.path)}
               aria-expanded={open.has(node.path)}
             >
@@ -98,7 +98,7 @@ function TreeRows({
             key={node.path}
             type="button"
             className={`file-item ${sel === node.path ? "sel" : ""}`.trim()}
-            style={{ paddingLeft: 14 + depth * 12 + 16 }}
+            style={{ paddingLeft: 10 + depth * 8 + 10 }}
             onClick={() => onOpen(node.path)}
           >
             {node.name}
@@ -425,7 +425,7 @@ export default function Workspace() {
                       key={e.code + e.path}
                       type="button"
                       className="file-item"
-                      style={{ paddingLeft: 14 }}
+                      style={{ paddingLeft: 10 }}
                       onClick={() => openFile(e.path)}
                     >
                       <span className="git-code">{e.code.trim() || "M"}</span>
