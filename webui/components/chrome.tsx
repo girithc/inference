@@ -14,15 +14,3 @@ export function TopBar() {
     </header>
   );
 }
-
-export function Footer() {
-  return (
-    <footer className="footer">
-      <span>INFERENCE✳ — CONNECT · EDIT · DEPLOY · LOGS</span>
-      <span>
-        <span className="sq-dot" aria-hidden="true" />
-        MODAL COOKBOOK
-      </span>
-    </footer>
-  );
-}

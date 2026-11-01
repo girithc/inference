@@ -13,6 +13,8 @@ type TreeNode = {
   children: TreeNode[];
 };
 
+type DockTab = "TERMINAL" | "LOGS" | "TEST";
+
 function buildTree(items: TreeItem[]): TreeNode[] {
   const root: TreeNode = { name: "", path: "", isDir: true, children: [] };
   for (const item of items) {
@@ -128,6 +130,8 @@ export default function Workspace() {
     '{\n  "messages": [{ "role": "user", "content": "Say hi in five words." }]\n}',
   );
   const [testOut, setTestOut] = useState("");
+  const [dockOpen, setDockOpen] = useState(false);
+  const [dockTab, setDockTab] = useState<DockTab>("TERMINAL");
 
   const logsAbort = useRef<AbortController | null>(null);
   const dirty = sel !== null && draft !== saved;
@@ -201,6 +205,8 @@ export default function Workspace() {
       setMessage("");
     } catch (err) {
       setDeployOut(`[SAVE ERROR] ${err instanceof Error ? err.message : "failed"}\n`);
+      setDockOpen(true);
+      setDockTab("TERMINAL");
     } finally {
       setBusy(null);
     }
@@ -211,6 +217,8 @@ export default function Workspace() {
     if (dirty && !window.confirm("Unsaved edits deploy the last saved version. Deploy anyway?"))
       return;
     setDeploying(true);
+    setDockOpen(true);
+    setDockTab("TERMINAL");
     setDeployOut(`$ modal deploy ${sel}\n`);
     try {
       const res = await fetch("/api/modal/deploy", {
@@ -249,6 +257,8 @@ export default function Workspace() {
     logsAbort.current = controller;
     setFollowing(true);
     setLogLines([]);
+    setDockOpen(true);
+    setDockTab("LOGS");
     try {
       const res = await fetch(`/api/modal/logs?app=${encodeURIComponent(logApp)}`, {
         signal: controller.signal,
@@ -275,6 +285,8 @@ export default function Workspace() {
   const runTest = async () => {
     setBusy("test");
     setTestOut("");
+    setDockOpen(true);
+    setDockTab("TEST");
     try {
       const res = await fetch("/api/infer/test", {
         method: "POST",
@@ -298,152 +310,198 @@ export default function Workspace() {
     return () => logsAbort.current?.abort();
   }, []);
 
+  const dockTabs: DockTab[] = ["TERMINAL", "LOGS", "TEST"];
+
   return (
-    <main className="ws">
-      {/* ---------------- files ---------------- */}
-      <aside className="ws-files">
-        <div className="pane-head">
-          <span>REPO — {repo || "…"}</span>
-          <button type="button" className="kill" onClick={refreshTree}>
-            SYNC
-          </button>
-        </div>
-        <div className="file-list">
-          {treeErr ? <p className="field-note" style={{ padding: 12 }}>{treeErr}</p> : null}
-          <TreeRows
-            nodes={treeData}
-            depth={0}
-            open={openDirs}
-            onToggle={toggleDir}
-            sel={sel}
-            onOpen={openFile}
-          />
-        </div>
-      </aside>
-
-      {/* ---------------- editor ---------------- */}
-      <section className="ws-editor">
-        <div className="pane-head">
-          <span>{sel ?? "OPEN A FILE FROM THE REPO"}</span>
-          {sel ? (
-            <span className={`ws-state ${dirty ? "orange-text" : ""}`.trim()}>
-              <i className={`sq-dot ${dirty ? "" : "sq-ink"}`.trim()} aria-hidden="true" />
-              {dirty ? "UNSAVED" : "SYNCED"}
-            </span>
-          ) : null}
-        </div>
-        {sel ? (
-          <>
-            <div className="editor-wrap">
-              <CodeMirror
-                value={draft}
-                height="100%"
-                extensions={[python()]}
-                onChange={(v) => setDraft(v)}
-                basicSetup={{ lineNumbers: true, foldGutter: false, highlightActiveLine: true }}
-              />
-            </div>
-            <div className="editor-actions">
-              <input
-                className="field mono"
-                placeholder="COMMIT MESSAGE (OPTIONAL)"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                spellCheck={false}
-              />
-              <button type="button" className="btn" onClick={save} disabled={!dirty || busy === "save"}>
-                {busy === "save" ? "COMMITTING…" : "SAVE → LOCAL + GITHUB"}
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className="empty-press">SELECT A FILE — EDIT — DEPLOY — WATCH LOGS</div>
-        )}
-      </section>
-
-      {/* ---------------- actions ---------------- */}
-      <aside className="ws-actions">
-        <div className="pane">
+    <main className="app">
+      <div className="ws">
+        {/* ---------------- files ---------------- */}
+        <aside className="ws-files">
           <div className="pane-head">
-            <span>DEPLOY</span>
-            <button
-              type="button"
-              className="btn btn-mini"
-              onClick={deploy}
-              disabled={!sel || deploying}
-            >
-              {deploying ? "DEPLOYING…" : `MODAL DEPLOY ↗`}
+            <span>REPO — {repo || "…"}</span>
+            <button type="button" className="kill" onClick={refreshTree}>
+              SYNC
             </button>
           </div>
-          <pre className="console">{deployOut || "$ —"}</pre>
-          {endpoints.length > 0 && (
-            <div className="ep-list">
-              {endpoints.map((u) => (
-                <span key={u} className="ep mono">
-                  <a href={u} target="_blank" rel="noreferrer">{u}</a>
-                  <button type="button" className="kill" onClick={() => navigator.clipboard.writeText(u)}>
-                    COPY
-                  </button>
-                </span>
-              ))}
+          <div className="file-list">
+            {treeErr ? <p className="field-note" style={{ padding: 12 }}>{treeErr}</p> : null}
+            <TreeRows
+              nodes={treeData}
+              depth={0}
+              open={openDirs}
+              onToggle={toggleDir}
+              sel={sel}
+              onOpen={openFile}
+            />
+          </div>
+        </aside>
+
+        {/* ---------------- editor ---------------- */}
+        <section className="ws-editor">
+          <div className="pane-head">
+            <span>{sel ?? "OPEN A FILE FROM THE REPO"}</span>
+            {sel ? (
+              <span className={`ws-state ${dirty ? "orange-text" : ""}`.trim()}>
+                <i className={`sq-dot ${dirty ? "" : "sq-ink"}`.trim()} aria-hidden="true" />
+                {dirty ? "UNSAVED" : "SYNCED"}
+              </span>
+            ) : null}
+          </div>
+          {sel ? (
+            <>
+              <div className="editor-wrap">
+                <CodeMirror
+                  value={draft}
+                  height="100%"
+                  extensions={[python()]}
+                  onChange={(v) => setDraft(v)}
+                  basicSetup={{ lineNumbers: true, foldGutter: false, highlightActiveLine: true }}
+                />
+              </div>
+              <div className="editor-actions">
+                <input
+                  className="field mono"
+                  placeholder="COMMIT MESSAGE (OPTIONAL)"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  spellCheck={false}
+                />
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={save}
+                  disabled={!dirty || busy === "save"}
+                >
+                  {busy === "save" ? "COMMITTING…" : "SAVE → LOCAL + GITHUB"}
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="empty-press">
+              SELECT A FILE — EDIT — DEPLOY — WATCH LOGS
             </div>
           )}
-        </div>
+        </section>
+      </div>
 
-        <div className="pane">
-          <div className="pane-head">
-            <span>LOGS</span>
-            <div style={{ display: "flex", gap: 8 }}>
-              <input
-                className="field mono"
-                style={{ width: 150, padding: "4px 8px", fontSize: 11 }}
-                placeholder="APP NAME"
-                value={logApp}
-                onChange={(e) => setLogApp(e.target.value)}
-                spellCheck={false}
-              />
-              <button
-                type="button"
-                className={`btn btn-mini ${following ? "" : "btn-ghost"}`}
-                onClick={followLogs}
-                disabled={!logApp}
-              >
-                {following ? "STOP" : "FOLLOW"}
-              </button>
-            </div>
-          </div>
-          <pre className="console">
-            {logLines.length > 0 ? logLines.join("\n") : "$ — PRESS FOLLOW TO STREAM LOGS"}
-          </pre>
-        </div>
-
-        <div className="pane">
-          <div className="pane-head">
-            <span>TEST THE ENDPOINT</span>
-            <button type="button" className="btn btn-mini" onClick={runTest} disabled={!testUrl || busy === "test"}>
-              {busy === "test" ? "RUNNING…" : "RUN →"}
+      {/* ---------------- dock ---------------- */}
+      <div className="dock">
+        <div className="dock-bar">
+          {dockTabs.map((t) => (
+            <button
+              key={t}
+              type="button"
+              className={`dock-tab ${dockOpen && dockTab === t ? "sel" : ""}`.trim()}
+              onClick={() => {
+                if (dockOpen && dockTab === t) setDockOpen(false);
+                else {
+                  setDockTab(t);
+                  setDockOpen(true);
+                }
+              }}
+            >
+              {t}
+              {t === "TERMINAL" && deploying ? " — RUNNING" : ""}
+              {t === "LOGS" && following ? " — LIVE" : ""}
             </button>
-          </div>
-          <input
-            className="field mono"
-            style={{ fontSize: 11 }}
-            placeholder="https://…modal.run"
-            value={testUrl}
-            onChange={(e) => setTestUrl(e.target.value)}
-            spellCheck={false}
-          />
-          <textarea
-            className="field mono"
-            style={{ fontSize: 11, minHeight: 90, marginTop: 8 }}
-            value={testBody}
-            onChange={(e) => setTestBody(e.target.value)}
-            spellCheck={false}
-          />
-          <pre className="console" style={{ marginTop: 8 }}>
-            {testOut || "$ —"}
-          </pre>
+          ))}
+          <span className="dock-status mono">
+            <i className="sq-dot" aria-hidden="true" />
+            MODAL COOKBOOK
+          </span>
         </div>
-      </aside>
+
+        {dockOpen && (
+          <div className="dock-body">
+            {dockTab === "TERMINAL" && (
+              <>
+                <div className="dock-toolbar">
+                  <button
+                    type="button"
+                    className="btn btn-mini"
+                    onClick={deploy}
+                    disabled={!sel || deploying}
+                  >
+                    {deploying ? "DEPLOYING…" : "MODAL DEPLOY ↗"}
+                  </button>
+                  <span className="field-note">{sel ?? "NO FILE SELECTED"}</span>
+                </div>
+                {endpoints.length > 0 && (
+                  <div className="dock-eps">
+                    {endpoints.map((u) => (
+                      <span key={u} className="ep mono">
+                        <a href={u} target="_blank" rel="noreferrer">{u}</a>
+                        <button
+                          type="button"
+                          className="kill"
+                          onClick={() => navigator.clipboard.writeText(u)}
+                        >
+                          COPY
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <pre className="console">{deployOut || "$ —"}</pre>
+              </>
+            )}
+
+            {dockTab === "LOGS" && (
+              <>
+                <div className="dock-toolbar">
+                  <input
+                    className="field mono dock-input"
+                    placeholder="APP NAME"
+                    value={logApp}
+                    onChange={(e) => setLogApp(e.target.value)}
+                    spellCheck={false}
+                  />
+                  <button
+                    type="button"
+                    className={`btn btn-mini ${following ? "" : "btn-ghost"}`.trim()}
+                    onClick={followLogs}
+                    disabled={!logApp}
+                  >
+                    {following ? "STOP" : "FOLLOW"}
+                  </button>
+                </div>
+                <pre className="console">
+                  {logLines.length > 0 ? logLines.join("\n") : "$ — PRESS FOLLOW TO STREAM LOGS"}
+                </pre>
+              </>
+            )}
+
+            {dockTab === "TEST" && (
+              <>
+                <div className="dock-toolbar">
+                  <input
+                    className="field mono dock-input"
+                    placeholder="https://…modal.run"
+                    value={testUrl}
+                    onChange={(e) => setTestUrl(e.target.value)}
+                    spellCheck={false}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-mini"
+                    onClick={runTest}
+                    disabled={!testUrl || busy === "test"}
+                  >
+                    {busy === "test" ? "RUNNING…" : "RUN →"}
+                  </button>
+                </div>
+                <textarea
+                  className="field mono dock-body-input"
+                  value={testBody}
+                  onChange={(e) => setTestBody(e.target.value)}
+                  spellCheck={false}
+                />
+                <pre className="console">{testOut || "$ —"}</pre>
+              </>
+            )}
+          </div>
+        )}
+      </div>
     </main>
   );
 }
