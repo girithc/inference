@@ -15,6 +15,45 @@ type TreeNode = {
 
 type DockTab = "TERMINAL" | "LOGS" | "TEST";
 
+const iconProps = {
+  width: 14,
+  height: 14,
+  viewBox: "0 0 16 16",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.5,
+  "aria-hidden": true as const,
+};
+
+function FileIcon() {
+  return (
+    <svg {...iconProps}>
+      <path d="M4 1.5h5l3 3v10H4z" />
+      <path d="M9 1.5v3h3" />
+    </svg>
+  );
+}
+
+function GitIcon() {
+  return (
+    <svg {...iconProps}>
+      <circle cx="4" cy="3.5" r="1.8" />
+      <circle cx="4" cy="12.5" r="1.8" />
+      <circle cx="12" cy="3.5" r="1.8" />
+      <path d="M4 5.3v5.4" />
+      <path d="M12 5.3v1.7c0 1.5-1.2 2.5-2.7 2.5H5.8" />
+    </svg>
+  );
+}
+
+function AiIcon() {
+  return (
+    <svg {...iconProps}>
+      <path d="M8 1.5 9.4 6.6 14.5 8 9.4 9.4 8 14.5 6.6 9.4 1.5 8 6.6 6.6Z" />
+    </svg>
+  );
+}
+
 function buildTree(items: TreeItem[]): TreeNode[] {
   const root: TreeNode = { name: "", path: "", isDir: true, children: [] };
   for (const item of items) {
@@ -131,7 +170,7 @@ export default function Workspace() {
   const [testOut, setTestOut] = useState("");
   const [dockOpen, setDockOpen] = useState(false);
   const [dockTab, setDockTab] = useState<DockTab>("TERMINAL");
-  const [leftView, setLeftView] = useState<"FILES" | "GIT">("FILES");
+  const [leftView, setLeftView] = useState<"FILES" | "GIT" | "AI">("FILES");
   const [gitEntries, setGitEntries] = useState<Array<{ code: string; path: string }>>([]);
   const [gitBusy, setGitBusy] = useState<string | null>(null);
 
@@ -384,8 +423,10 @@ export default function Workspace() {
                 type="button"
                 className={leftView === "FILES" ? "sel" : ""}
                 onClick={() => setLeftView("FILES")}
+                aria-label="Files"
+                title="Files"
               >
-                FILES
+                <FileIcon />
               </button>
               <button
                 type="button"
@@ -394,13 +435,26 @@ export default function Workspace() {
                   setLeftView("GIT");
                   loadGit();
                 }}
+                aria-label="Source control"
+                title="Source control"
               >
-                SOURCE CONTROL
+                <GitIcon />
+              </button>
+              <button
+                type="button"
+                className={leftView === "AI" ? "sel" : ""}
+                onClick={() => setLeftView("AI")}
+                aria-label="AI"
+                title="AI"
+              >
+                <AiIcon />
               </button>
             </div>
           </div>
 
-          {leftView === "FILES" ? (
+          {leftView === "AI" ? (
+            <div className="ai-blank" />
+          ) : leftView === "FILES" ? (
             <div className="file-list">
               {treeErr ? <p className="field-note" style={{ padding: 12 }}>{treeErr}</p> : null}
               <TreeRows

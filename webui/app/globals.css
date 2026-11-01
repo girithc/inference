@@ -293,6 +293,14 @@ textarea {
   cursor: pointer;
   line-height: 1;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.seg-mini button svg {
+  flex: none;
+  display: block;
 }
 
 .seg-mini button + button {
@@ -322,6 +330,11 @@ textarea {
 
 .git-actions .btn {
   width: 100%;
+}
+
+.ai-blank {
+  flex: 1;
+  min-height: 0;
 }
 
 /* files */
