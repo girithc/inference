@@ -117,7 +117,6 @@ export default function Workspace() {
   const [sha, setSha] = useState<string>("");
   const [saved, setSaved] = useState<string>("");
   const [draft, setDraft] = useState<string>("");
-  const [message, setMessage] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [deploying, setDeploying] = useState(false);
   const [deployOut, setDeployOut] = useState("");
@@ -132,6 +131,9 @@ export default function Workspace() {
   const [testOut, setTestOut] = useState("");
   const [dockOpen, setDockOpen] = useState(false);
   const [dockTab, setDockTab] = useState<DockTab>("TERMINAL");
+  const [leftView, setLeftView] = useState<"FILES" | "GIT">("FILES");
+  const [gitEntries, setGitEntries] = useState<Array<{ code: string; path: string }>>([]);
+  const [gitBusy, setGitBusy] = useState<string | null>(null);
 
   const logsAbort = useRef<AbortController | null>(null);
   const dirty = sel !== null && draft !== saved;
@@ -181,7 +183,6 @@ export default function Workspace() {
       setSha(data.sha);
       setSaved(data.content);
       setDraft(data.content);
-      setMessage("");
     } catch (err) {
       setDeployOut(`[OPEN ERROR] ${err instanceof Error ? err.message : "failed"}\n`);
     } finally {
@@ -196,19 +197,65 @@ export default function Workspace() {
       const res = await fetch("/api/gh/file", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path: sel, content: draft, sha, message }),
+        body: JSON.stringify({ path: sel, content: draft, sha }),
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setSha(data.sha);
       setSaved(draft);
-      setMessage("");
     } catch (err) {
       setDeployOut(`[SAVE ERROR] ${err instanceof Error ? err.message : "failed"}\n`);
       setDockOpen(true);
       setDockTab("TERMINAL");
     } finally {
       setBusy(null);
+    }
+  };
+
+  const loadGit = useCallback(async () => {
+    setGitBusy("status");
+    try {
+      const res = await fetch("/api/git/status");
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setGitEntries(data.entries);
+    } catch (err) {
+      setDeployOut(`[GIT ERROR] ${err instanceof Error ? err.message : "failed"}\n`);
+      setDockOpen(true);
+      setDockTab("TERMINAL");
+    } finally {
+      setGitBusy(null);
+    }
+  }, []);
+
+  const commitAll = async () => {
+    if (gitBusy) return;
+    setGitBusy("push");
+    setDockOpen(true);
+    setDockTab("TERMINAL");
+    setDeployOut((d) => `${d}\n$ git add -A · commit · pull --rebase · push\n`);
+    try {
+      const res = await fetch("/api/git/push", { method: "POST" });
+      const data = await res.json();
+      setDeployOut(
+        (d) => `${d}${data.output ?? ""}${data.error ? `\n[ERROR] ${data.error}` : "\n[PUSHED ✓]"}`,
+      );
+      await loadGit();
+      await refreshTree();
+      // resync the open file's sha after the rebase — but never clobber unsaved edits
+      if (sel && draft === saved) {
+        const r = await fetch(`/api/gh/file?path=${encodeURIComponent(sel)}`);
+        const d = await r.json();
+        if (!d.error) {
+          setSha(d.sha);
+          setSaved(d.content);
+          setDraft(d.content);
+        }
+      }
+    } catch (err) {
+      setDeployOut((d) => `${d}[PUSH ERROR] ${err instanceof Error ? err.message : "failed"}\n`);
+    } finally {
+      setGitBusy(null);
     }
   };
 
@@ -318,22 +365,80 @@ export default function Workspace() {
         {/* ---------------- files ---------------- */}
         <aside className="ws-files">
           <div className="pane-head">
-            <span>REPO — {repo || "…"}</span>
-            <button type="button" className="kill" onClick={refreshTree}>
+            <div className="seg-mini" role="tablist">
+              <button
+                type="button"
+                className={leftView === "FILES" ? "sel" : ""}
+                onClick={() => setLeftView("FILES")}
+              >
+                FILES
+              </button>
+              <button
+                type="button"
+                className={leftView === "GIT" ? "sel" : ""}
+                onClick={() => {
+                  setLeftView("GIT");
+                  loadGit();
+                }}
+              >
+                SOURCE CONTROL
+              </button>
+            </div>
+            <button
+              type="button"
+              className="kill"
+              onClick={leftView === "FILES" ? refreshTree : loadGit}
+            >
               SYNC
             </button>
           </div>
-          <div className="file-list">
-            {treeErr ? <p className="field-note" style={{ padding: 12 }}>{treeErr}</p> : null}
-            <TreeRows
-              nodes={treeData}
-              depth={0}
-              open={openDirs}
-              onToggle={toggleDir}
-              sel={sel}
-              onOpen={openFile}
-            />
-          </div>
+
+          {leftView === "FILES" ? (
+            <div className="file-list">
+              {treeErr ? <p className="field-note" style={{ padding: 12 }}>{treeErr}</p> : null}
+              <TreeRows
+                nodes={treeData}
+                depth={0}
+                open={openDirs}
+                onToggle={toggleDir}
+                sel={sel}
+                onOpen={openFile}
+              />
+            </div>
+          ) : (
+            <>
+              <div className="file-list">
+                {gitEntries.length === 0 ? (
+                  <div className="field-note" style={{ padding: 12 }}>
+                    {gitBusy === "status" ? "READING…" : "WORKING TREE CLEAN — ALL CHANGES PUSHED"}
+                  </div>
+                ) : (
+                  gitEntries.map((e) => (
+                    <button
+                      key={e.code + e.path}
+                      type="button"
+                      className="file-item"
+                      style={{ paddingLeft: 14 }}
+                      onClick={() => openFile(e.path)}
+                    >
+                      <span className="git-code">{e.code.trim() || "M"}</span>
+                      {e.path}
+                    </button>
+                  ))
+                )}
+              </div>
+              <div className="git-actions">
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={commitAll}
+                  disabled={gitEntries.length === 0 || gitBusy !== null}
+                >
+                  {gitBusy === "push" ? "PUSHING…" : "COMMIT + PUSH ALL →"}
+                </button>
+              </div>
+            </>
+          )}
         </aside>
 
         {/* ---------------- editor ---------------- */}
@@ -359,13 +464,6 @@ export default function Workspace() {
                 />
               </div>
               <div className="editor-actions">
-                <input
-                  className="field mono"
-                  placeholder="COMMIT MESSAGE (OPTIONAL)"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  spellCheck={false}
-                />
                 <button
                   type="button"
                   className="btn"
