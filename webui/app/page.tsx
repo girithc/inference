@@ -75,7 +75,9 @@ function TreeRows({
               onClick={() => onToggle(node.path)}
               aria-expanded={open.has(node.path)}
             >
-              <i className={`caret ${open.has(node.path) ? "open" : ""}`.trim()} aria-hidden="true" />
+              <span className={`caret ${open.has(node.path) ? "open" : ""}`.trim()} aria-hidden="true">
+                {">"}
+              </span>
               {node.name}
             </button>
             {open.has(node.path) && (
@@ -93,7 +95,7 @@ function TreeRows({
           <button
             key={node.path}
             type="button"
-            className={`file-item mono ${sel === node.path ? "sel" : ""}`.trim()}
+            className={`file-item ${sel === node.path ? "sel" : ""}`.trim()}
             style={{ paddingLeft: 14 + depth * 12 + 16 }}
             onClick={() => onOpen(node.path)}
           >
