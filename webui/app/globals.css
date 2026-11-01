@@ -321,6 +321,15 @@ textarea {
   line-height: 1;
 }
 
+.git-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  flex: none;
+}
+
 .git-actions {
   border-top: 1px solid var(--ink);
   padding: 12px;

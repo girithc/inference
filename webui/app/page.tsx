@@ -435,14 +435,6 @@ export default function Workspace() {
             <span className="brand">
               INFERENCE<span className="spin-star orange-text" aria-hidden="true">✳</span> STUDIO
             </span>
-            <a
-              className="kill"
-              href="https://github.com/girithc/inference"
-              target="_blank"
-              rel="noreferrer"
-            >
-              GH ↗
-            </a>
           </div>
 
           <div className="seg-row">
@@ -530,25 +522,36 @@ export default function Workspace() {
             </div>
           ) : (
             <>
+              <div className="git-status-row">
+                <span className="field-note">
+                  {gitBusy === "status"
+                    ? "READING…"
+                    : gitEntries.length === 0
+                      ? "WORKTREE CLEAN"
+                      : `WORKTREE — ${gitEntries.length} CHANGE${gitEntries.length === 1 ? "" : "S"}`}
+                </span>
+                <a
+                  className="kill"
+                  href="https://github.com/girithc/inference"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  GH ↗
+                </a>
+              </div>
               <div className="file-list">
-                {gitEntries.length === 0 ? (
-                  <div className="field-note" style={{ padding: 12 }}>
-                    {gitBusy === "status" ? "READING…" : "WORKING TREE CLEAN"}
-                  </div>
-                ) : (
-                  gitEntries.map((e) => (
-                    <button
-                      key={e.code + e.path}
-                      type="button"
-                      className="file-item"
-                      style={{ paddingLeft: 10 }}
-                      onClick={() => openFile(e.path)}
-                    >
-                      <span className="git-code">{e.code.trim() || "M"}</span>
-                      {e.path}
-                    </button>
-                  ))
-                )}
+                {gitEntries.map((e) => (
+                  <button
+                    key={e.code + e.path}
+                    type="button"
+                    className="file-item"
+                    style={{ paddingLeft: 10 }}
+                    onClick={() => openFile(e.path)}
+                  >
+                    <span className="git-code">{e.code.trim() || "M"}</span>
+                    {e.path}
+                  </button>
+                ))}
               </div>
               <div className="git-actions">
                 <button
