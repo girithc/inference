@@ -260,7 +260,6 @@ textarea {
 
 .seg-row {
   padding: 8px 10px;
-  border-bottom: 1px solid var(--ink);
   flex: none;
 }
 
