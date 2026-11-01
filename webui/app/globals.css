@@ -222,7 +222,7 @@ textarea {
   min-height: 0;
   display: grid;
   /* fixed width so FILES and SOURCE CONTROL share the same column */
-  grid-template-columns: 210px minmax(0, 1fr);
+  grid-template-columns: 250px minmax(0, 1fr);
 }
 
 .pane-head {
