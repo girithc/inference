@@ -744,6 +744,34 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+/* ---------- scrollbars — small, heavy ink, sharp, orange hover ---------- */
+
+:is(.file-list, .ai-list, .cm-scroller, .console) {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink) transparent;
+}
+
+:is(.file-list, .ai-list, .cm-scroller, .console)::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+:is(.file-list, .ai-list, .cm-scroller, .console)::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+:is(.file-list, .ai-list, .cm-scroller, .console)::-webkit-scrollbar-thumb {
+  background: var(--ink);
+}
+
+:is(.file-list, .ai-list, .cm-scroller, .console)::-webkit-scrollbar-thumb:hover {
+  background: var(--orange);
+}
+
+:is(.file-list, .ai-list, .cm-scroller, .console)::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 /* ---------- 404 ---------- */
 
 .nf {
