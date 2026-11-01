@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getSetting } from "@/lib/server";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
-const MODEL = process.env.FIREWORKS_MODEL ?? "accounts/fireworks/routers/glm-5p3-flash-us";
+const DEFAULT_MODEL = "accounts/fireworks/routers/glm-5p3-flash-us";
 
 const SYSTEM = [
   "You review Modal inference deployment code for an inference engineer.",
@@ -24,22 +25,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "file content required" }, { status: 400 });
     }
 
-    const key = process.env.FIREWORKS_API_KEY;
+    const baseUrl = (getSetting("ai_base_url") || "https://api.fireworks.ai/inference/v1").replace(
+      /\/+$/,
+      "",
+    );
+    const key = getSetting("ai_api_key") || process.env.FIREWORKS_API_KEY;
     if (!key) {
       return NextResponse.json(
-        { error: "FIREWORKS_API_KEY missing — paste it into webui/.env.local and restart the dev server" },
+        { error: "no API key — set it in AI SETTINGS (gear icon) or FIREWORKS_API_KEY in webui/.env.local" },
         { status: 400 },
       );
     }
+    const model = getSetting("ai_model") || process.env.FIREWORKS_MODEL || DEFAULT_MODEL;
 
-    const res = await fetch("https://api.fireworks.ai/inference/v1/chat/completions", {
+    const res = await fetch(`${baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${key}`,
       },
       body: JSON.stringify({
-        model: MODEL,
+        model,
         temperature: 0.2,
         max_tokens: 1024,
         messages: [

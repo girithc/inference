@@ -154,6 +154,16 @@ const letterOf = (code: string): string => {
   return c.charAt(0) || "M";
 };
 
+function GearIcon() {
+  return (
+    <svg {...iconProps} width={13} height={13}>
+      <path d="M1.5 4.5h13M1.5 11.5h13" />
+      <circle cx="10.5" cy="4.5" r="1.8" />
+      <circle cx="5.5" cy="11.5" r="1.8" />
+    </svg>
+  );
+}
+
 export default function Workspace() {
   const [repo, setRepo] = useState("");
   const [tree, setTree] = useState<TreeItem[]>([]);
@@ -176,6 +186,9 @@ export default function Workspace() {
   const [testOut, setTestOut] = useState("");
   const [aiResults, setAiResults] = useState<Array<{ id: string; path: string; text: string }>>([]);
   const [aiOpenId, setAiOpenId] = useState<string | null>(null);
+  const [aiSettings, setAiSettings] = useState({ baseUrl: "", apiKey: "", model: "" });
+  const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
+  const [aiSaved, setAiSaved] = useState(false);
   const [dockOpen, setDockOpen] = useState(false);
   const [dockTab, setDockTab] = useState<DockTab>("TERMINAL");
   const [leftView, setLeftView] = useState<"FILES" | "GIT" | "AI">("FILES");
@@ -400,6 +413,30 @@ export default function Workspace() {
     }
   };
 
+  useEffect(() => {
+    fetch("/api/ai/settings")
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d.error) setAiSettings({ baseUrl: d.baseUrl ?? "", apiKey: d.apiKey ?? "", model: d.model ?? "" });
+      })
+      .catch(() => {});
+  }, []);
+
+  const saveAiSettings = async () => {
+    setBusy("aisave");
+    try {
+      await fetch("/api/ai/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(aiSettings),
+      });
+      setAiSaved(true);
+      window.setTimeout(() => setAiSaved(false), 1500);
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const analyze = async () => {
     if (!sel || busy === "ai") return;
     setBusy("ai");
@@ -480,14 +517,68 @@ export default function Workspace() {
 
           {leftView === "AI" ? (
             <div className="ai-pane">
-              <button
-                type="button"
-                className="btn btn-mini"
-                onClick={analyze}
-                disabled={!sel || busy === "ai"}
-              >
-                {busy === "ai" ? "ANALYZING…" : "ANALYZE"}
-              </button>
+              <div className="ai-actions">
+                <button
+                  type="button"
+                  className="btn btn-mini"
+                  onClick={analyze}
+                  disabled={!sel || busy === "ai"}
+                >
+                  {busy === "ai" ? "ANALYZING…" : "ANALYZE"}
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-mini ${aiSettingsOpen ? "" : "btn-ghost"}`.trim()}
+                  onClick={() => setAiSettingsOpen((v) => !v)}
+                  aria-label="AI settings"
+                  title="AI settings"
+                >
+                  <GearIcon />
+                </button>
+              </div>
+              {aiSettingsOpen && (
+                <div className="ai-settings">
+                  <label className="ai-set-label">
+                    BASE URL
+                    <input
+                      className="field ai-set-input"
+                      value={aiSettings.baseUrl}
+                      onChange={(e) => setAiSettings((s) => ({ ...s, baseUrl: e.target.value }))}
+                      placeholder="https://api.fireworks.ai/inference/v1"
+                      spellCheck={false}
+                    />
+                  </label>
+                  <label className="ai-set-label">
+                    API KEY
+                    <input
+                      className="field ai-set-input"
+                      type="password"
+                      value={aiSettings.apiKey}
+                      onChange={(e) => setAiSettings((s) => ({ ...s, apiKey: e.target.value }))}
+                      placeholder="fw_…"
+                      spellCheck={false}
+                    />
+                  </label>
+                  <label className="ai-set-label">
+                    MODEL ID
+                    <input
+                      className="field ai-set-input"
+                      value={aiSettings.model}
+                      onChange={(e) => setAiSettings((s) => ({ ...s, model: e.target.value }))}
+                      placeholder="accounts/fireworks/routers/glm-5p3-flash-us"
+                      spellCheck={false}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="btn btn-mini"
+                    onClick={saveAiSettings}
+                    disabled={busy === "aisave"}
+                  >
+                    {aiSaved ? "SAVED" : busy === "aisave" ? "SAVING…" : "SAVE → SQLITE"}
+                  </button>
+                </div>
+              )}
               <div className="ai-list">
                 {aiResults.map((r, i) => (
                   <div key={r.id} className="ai-item">

@@ -447,14 +447,42 @@ textarea {
   padding: 10px;
 }
 
-.ai-pane .btn {
+.ai-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   flex: none;
-  align-self: flex-start;
 }
 
-.ai-pane .btn {
+.ai-actions .btn-mini:first-child {
+  flex: 1;
+}
+
+.ai-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--ink);
+  background: var(--paper-dim);
   flex: none;
-  align-self: flex-start;
+}
+
+.ai-set-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+}
+
+.ai-set-input {
+  padding: 6px 8px;
+  font-size: 11px;
+  font-family: var(--font-mono);
 }
 
 .ai-list {

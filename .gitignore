@@ -3,3 +3,6 @@ __pycache__/
 *.pyc
 .npm-cache/
 .DS_Store
+
+# sqlite db
+webui/data/

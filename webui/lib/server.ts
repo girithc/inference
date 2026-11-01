@@ -1,9 +1,38 @@
 import { execFile } from "node:child_process";
 import path from "node:path";
 import fs from "node:fs";
+import { DatabaseSync } from "node:sqlite";
 
 /** The Next server runs from webui/ — the repo root is one level up. */
 export const REPO_ROOT = path.resolve(process.cwd(), "..");
+
+let db: DatabaseSync | null = null;
+
+/** SQLite at webui/data/studio.db — persistent app settings. */
+export function getDb(): DatabaseSync {
+  if (!db) {
+    const dir = path.join(process.cwd(), "data");
+    fs.mkdirSync(dir, { recursive: true });
+    db = new DatabaseSync(path.join(dir, "studio.db"));
+    db.exec("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)");
+  }
+  return db;
+}
+
+export function getSetting(key: string): string | null {
+  const row = getDb().prepare("SELECT value FROM settings WHERE key = ?").get(key) as
+    | { value: string }
+    | undefined;
+  return row?.value ?? null;
+}
+
+export function setSetting(key: string, value: string): void {
+  getDb()
+    .prepare(
+      "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+    )
+    .run(key, value);
+}
 
 let repoCache: string | null = null;
 
