@@ -718,14 +718,12 @@ textarea {
   flex: 1;
   display: grid;
   place-content: center;
-  border-bottom: 1px solid var(--ink);
 }
 
 .editor-wrap {
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  border-bottom: 1px solid var(--ink);
   display: flex;
   flex-direction: column;
 }
