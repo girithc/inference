@@ -18,6 +18,16 @@ export function getDb(): DatabaseSync {
     fs.mkdirSync(dir, { recursive: true });
     db = new DatabaseSync(path.join(dir, "studio.db"));
     db.exec("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)");
+    db.exec(`CREATE TABLE IF NOT EXISTS deploys (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      folder TEXT NOT NULL,
+      entry TEXT NOT NULL,
+      started_at INTEGER,
+      finished_at INTEGER,
+      code INTEGER,
+      status TEXT,
+      endpoints TEXT
+    )`);
   }
   return db;
 }

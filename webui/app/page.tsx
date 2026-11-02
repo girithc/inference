@@ -391,6 +391,8 @@ export default function Workspace() {
   const [sysLine, setSysLine] = useState("");
   const [termBusy, setTermBusy] = useState(false);
   const [endpoints, setEndpoints] = useState<string[]>([]);
+  const [deployables, setDeployables] = useState<Array<{ folder: string; entry: string }>>([]);
+  const [deployTarget, setDeployTarget] = useState("");
   const [logApp, setLogApp] = useState("");
   const [logLines, setLogLines] = useState<string[]>([]);
   const [following, setFollowing] = useState(false);
@@ -525,15 +527,50 @@ export default function Workspace() {
     });
   }, []);
 
-  const deployInTerminal = async () => {
+  useEffect(() => {
+    fetch("/api/deployables")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.deployables) {
+          setDeployables(d.deployables);
+          setDeployTarget((t) => t || d.deployables[0]?.folder || "");
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // when opening a file, prefer its own model folder as the deploy target
+  useEffect(() => {
     if (!sel) return;
+    const owner = deployables.find((d) => sel.startsWith(`${d.folder}/`));
+    if (owner) setDeployTarget(owner.folder);
+  }, [sel, deployables]);
+
+  const deployFolder = async () => {
+    if (!deployTarget || termBusy) return;
     setDockOpen(true);
     setDockTab("TERMINAL");
-    await fetch("/api/term/run", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ command: `modal deploy ${sel}`, echo: true }),
-    });
+    await flushWrite();
+    setTermBusy(true);
+    setSysLine(`DEPLOYING ${deployTarget}…`);
+    try {
+      const res = await fetch("/api/deploy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ folder: deployTarget }),
+      });
+      const data = await res.json();
+      if (data.endpoints?.length) handleEndpoints(data.endpoints);
+      setSysLine(
+        data.ok
+          ? `LIVE ✓ — ${deployTarget}`
+          : `DEPLOY FAILED${data.code !== undefined ? ` (exit ${data.code})` : ""}${data.error ? ` — ${data.error}` : ""}`,
+      );
+    } catch (err) {
+      setSysLine(`DEPLOY ERROR — ${err instanceof Error ? err.message : "failed"}`);
+    } finally {
+      setTermBusy(false);
+    }
   };
 
   const openFile = async (path: string) => {
@@ -1074,13 +1111,27 @@ export default function Workspace() {
             {dockTab === "TERMINAL" && (
               <>
                 <div className="dock-toolbar">
+                  <select
+                    className="field dock-input"
+                    style={{ flex: "0 1 190px" }}
+                    value={deployTarget}
+                    onChange={(e) => setDeployTarget(e.target.value)}
+                    aria-label="Deploy target folder"
+                  >
+                    {deployables.length === 0 ? <option value="">NO APPS FOUND</option> : null}
+                    {deployables.map((d) => (
+                      <option key={d.folder} value={d.folder}>
+                        {d.folder}
+                      </option>
+                    ))}
+                  </select>
                   <button
                     type="button"
                     className="btn btn-mini"
-                    onClick={deployInTerminal}
-                    disabled={!sel || termBusy}
+                    onClick={deployFolder}
+                    disabled={!deployTarget || termBusy}
                   >
-                    {termBusy ? "BUSY…" : "MODAL DEPLOY ↗"}
+                    {termBusy ? "DEPLOYING…" : "DEPLOY ↗"}
                   </button>
                   <button
                     type="button"

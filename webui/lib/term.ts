@@ -83,6 +83,10 @@ export function subscribe(sub: (s: string) => void): () => void {
   };
 }
 
+export function isBusy(): boolean {
+  return !!session().child;
+}
+
 export function interrupt(): void {
   const sess = session();
   if (!sess.child) return;
