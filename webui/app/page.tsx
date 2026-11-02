@@ -219,9 +219,9 @@ export default function Workspace() {
   const [tree, setTree] = useState<TreeItem[]>([]);
   const [treeErr, setTreeErr] = useState<string | null>(null);
   const [sel, setSel] = useState<string | null>(null);
-  const [sha, setSha] = useState<string>("");
-  const [saved, setSaved] = useState<string>("");
-  const [draft, setDraft] = useState<string>("");
+  const [openFiles, setOpenFiles] = useState<
+    Array<{ path: string; sha: string; saved: string; draft: string }>
+  >([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [deploying, setDeploying] = useState(false);
   const [deployOut, setDeployOut] = useState("");
@@ -246,13 +246,15 @@ export default function Workspace() {
   const [gitBusy, setGitBusy] = useState<string | null>(null);
 
   const logsAbort = useRef<AbortController | null>(null);
-  const dirty = sel !== null && draft !== saved;
+
+  /* the active file and its dirty state, derived from the open set */
+  const active = openFiles.find((f) => f.path === sel) ?? null;
+  const draft = active?.draft ?? "";
+  const dirty = active ? active.draft !== active.saved : false;
 
   /* editor auto-save: edits hit the local disk (debounced); GitHub via source control */
   const pendingWrite = useRef<{ path: string; content: string } | null>(null);
   const writeTimer = useRef<number | null>(null);
-  const selRef = useRef(sel);
-  selRef.current = sel;
 
   const flushWrite = useCallback(async () => {
     const p = pendingWrite.current;
@@ -268,15 +270,20 @@ export default function Workspace() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(p),
       });
-      if (selRef.current === p.path) setSaved(p.content);
+      setOpenFiles((prev) =>
+        prev.map((f) => (f.path === p.path ? { ...f, saved: p.content } : f)),
+      );
     } catch {
       /* disk write failed — draft stays, indicator shows UNSAVED */
     }
   }, []);
 
   const onEditorChange = (v: string) => {
-    setDraft(v);
-    pendingWrite.current = { path: sel ?? "", content: v };
+    if (!sel) return;
+    setOpenFiles((prev) =>
+      prev.map((f) => (f.path === sel ? { ...f, draft: v } : f)),
+    );
+    pendingWrite.current = { path: sel, content: v };
     if (writeTimer.current) window.clearTimeout(writeTimer.current);
     writeTimer.current = window.setTimeout(() => {
       flushWrite();
@@ -318,16 +325,21 @@ export default function Workspace() {
   }, [refreshTree]);
 
   const openFile = async (path: string) => {
-    if (pendingWrite.current && pendingWrite.current.path !== path) await flushWrite();
+    if (openFiles.some((f) => f.path === path)) {
+      setSel(path);
+      return;
+    }
+    await flushWrite();
     setBusy(path);
     try {
       const res = await fetch(`/api/gh/file?path=${encodeURIComponent(path)}`);
       const data = await res.json();
       if (data.error) throw new Error(data.error);
+      setOpenFiles((prev) => [
+        ...prev,
+        { path, sha: data.sha, saved: data.content, draft: data.content },
+      ]);
       setSel(path);
-      setSha(data.sha);
-      setSaved(data.content);
-      setDraft(data.content);
     } catch (err) {
       setDeployOut(`[OPEN ERROR] ${err instanceof Error ? err.message : "failed"}\n`);
     } finally {
@@ -335,25 +347,15 @@ export default function Workspace() {
     }
   };
 
-  const save = async () => {
-    if (!sel || !dirty) return;
-    setBusy("save");
-    try {
-      const res = await fetch("/api/gh/file", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path: sel, content: draft, sha }),
-      });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      setSha(data.sha);
-      setSaved(draft);
-    } catch (err) {
-      setDeployOut(`[SAVE ERROR] ${err instanceof Error ? err.message : "failed"}\n`);
-      setDockOpen(true);
-      setDockTab("TERMINAL");
-    } finally {
-      setBusy(null);
+  const closeFile = (path: string) => {
+    const f = openFiles.find((x) => x.path === path);
+    if (f && f.draft !== f.saved) pendingWrite.current = { path, content: f.draft };
+    void flushWrite();
+    const idx = openFiles.findIndex((x) => x.path === path);
+    const next = openFiles.filter((x) => x.path !== path);
+    setOpenFiles(next);
+    if (sel === path) {
+      setSel(next[Math.min(idx, next.length - 1)]?.path ?? null);
     }
   };
 
@@ -388,13 +390,15 @@ export default function Workspace() {
       await loadGit();
       await refreshTree();
       // resync the open file's sha after the rebase — but never clobber unsaved edits
-      if (sel && draft === saved) {
+      if (sel && active && active.draft === active.saved) {
         const r = await fetch(`/api/gh/file?path=${encodeURIComponent(sel)}`);
         const d = await r.json();
         if (!d.error) {
-          setSha(d.sha);
-          setSaved(d.content);
-          setDraft(d.content);
+          setOpenFiles((prev) =>
+            prev.map((f) =>
+              f.path === sel ? { ...f, sha: d.sha, saved: d.content, draft: d.content } : f,
+            ),
+          );
         }
       }
     } catch (err) {
@@ -761,6 +765,31 @@ export default function Workspace() {
 
         {/* ---------------- editor ---------------- */}
         <section className="ws-editor">
+          {openFiles.length > 0 && (
+            <div className="tab-strip">
+              {openFiles.map((f) => (
+                <div
+                  key={f.path}
+                  className={`tab ${sel === f.path ? "sel" : ""}`.trim()}
+                  onClick={() => setSel(f.path)}
+                  title={f.path}
+                >
+                  <span className="tab-name">{f.path.split("/").pop()}</span>
+                  <button
+                    type="button"
+                    className="tab-close"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      closeFile(f.path);
+                    }}
+                    aria-label={`Close ${f.path}`}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="pane-head">
             <span>{sel ?? "OPEN A FILE FROM THE REPO"}</span>
             {sel ? (
@@ -773,7 +802,8 @@ export default function Workspace() {
           {sel ? (
             <div className="editor-wrap">
               <CodeMirror
-                value={draft}
+                key={sel}
+                value={active?.draft ?? ""}
                 height="100%"
                 extensions={[python(), vscodeTheme, syntaxHighlighting(vscodeHighlight), autocompletion()]}
                 onChange={onEditorChange}

@@ -576,6 +576,66 @@ textarea {
   color: var(--paper);
 }
 
+/* editor tabs — name only; full path lives in the pane-head + hover title */
+
+.tab-strip {
+  display: flex;
+  overflow-x: auto;
+  flex: none;
+  border-bottom: 1px solid var(--ink);
+  min-height: 0;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border-right: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--ink);
+  font-family: var(--font-grotesk);
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--ink-soft);
+  cursor: pointer;
+  white-space: nowrap;
+  flex: none;
+  height: 38px;
+}
+
+.tab:hover {
+  background: var(--paper-dim);
+}
+
+.tab.sel {
+  background: var(--ink);
+  color: var(--paper);
+  border-bottom-color: var(--ink);
+}
+
+.tab-name {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tab-close {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  opacity: 0.55;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 2px;
+}
+
+.tab-close:hover {
+  opacity: 1;
+  color: var(--orange);
+}
+
 /* editor */
 
 .ws-editor {
@@ -746,29 +806,29 @@ textarea {
 
 /* ---------- scrollbars — small, heavy ink, sharp, orange hover ---------- */
 
-:is(.file-list, .ai-list, .cm-scroller, .console) {
+:is(.file-list, .ai-list, .cm-scroller, .console, .tab-strip) {
   scrollbar-width: thin;
   scrollbar-color: var(--ink) transparent;
 }
 
-:is(.file-list, .ai-list, .cm-scroller, .console)::-webkit-scrollbar {
+:is(.file-list, .ai-list, .cm-scroller, .console, .tab-strip)::-webkit-scrollbar {
   width: 4px;
   height: 4px;
 }
 
-:is(.file-list, .ai-list, .cm-scroller, .console)::-webkit-scrollbar-track {
+:is(.file-list, .ai-list, .cm-scroller, .console, .tab-strip)::-webkit-scrollbar-track {
   background: transparent;
 }
 
-:is(.file-list, .ai-list, .cm-scroller, .console)::-webkit-scrollbar-thumb {
+:is(.file-list, .ai-list, .cm-scroller, .console, .tab-strip)::-webkit-scrollbar-thumb {
   background: var(--ink);
 }
 
-:is(.file-list, .ai-list, .cm-scroller, .console)::-webkit-scrollbar-thumb:hover {
+:is(.file-list, .ai-list, .cm-scroller, .console, .tab-strip)::-webkit-scrollbar-thumb:hover {
   background: var(--orange);
 }
 
-:is(.file-list, .ai-list, .cm-scroller, .console)::-webkit-scrollbar-corner {
+:is(.file-list, .ai-list, .cm-scroller, .console, .tab-strip)::-webkit-scrollbar-corner {
   background: transparent;
 }
 
