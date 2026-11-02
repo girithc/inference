@@ -850,8 +850,6 @@ textarea {
   flex: 1;
   min-height: 0;
   margin: 10px 16px;
-  border: 1px solid var(--ink);
-  background: var(--paper);
 }
 
 .term-host {
