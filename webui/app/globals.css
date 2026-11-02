@@ -762,7 +762,7 @@ textarea {
 }
 
 .dock-bar {
-  height: 40px;
+  height: 48px; /* matches the brand row height */
   display: flex;
   align-items: center;
   gap: 4px;
