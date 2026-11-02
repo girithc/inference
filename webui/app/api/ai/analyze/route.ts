@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
         temperature: 0.2,
         // glm/deepseek-class routers spend tokens thinking first — give the
         // answer room so it doesn't stop mid-sentence
-        max_tokens: 4096,
+        max_tokens: 8192,
         messages: [
           { role: "system", content: SYSTEM },
           {
