@@ -239,6 +239,26 @@ export default function Workspace() {
   const [aiSettings, setAiSettings] = useState({ baseUrl: "", apiKey: "", model: "" });
   const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
   const [aiSaved, setAiSaved] = useState(false);
+  const [tabTip, setTabTip] = useState<{ path: string; left: number } | null>(null);
+  const tabTipTimer = useRef<number | null>(null);
+
+  const showTabTip = (path: string, el: HTMLElement) => {
+    if (tabTipTimer.current) window.clearTimeout(tabTipTimer.current);
+    tabTipTimer.current = window.setTimeout(() => {
+      const r = el.getBoundingClientRect();
+      const estimated = path.length * 6.2 + 20;
+      const left = Math.min(r.left, Math.max(8, window.innerWidth - estimated - 8));
+      setTabTip({ path, left });
+    }, 2000);
+  };
+
+  const hideTabTip = () => {
+    if (tabTipTimer.current) {
+      window.clearTimeout(tabTipTimer.current);
+      tabTipTimer.current = null;
+    }
+    setTabTip(null);
+  };
   const [dockOpen, setDockOpen] = useState(false);
   const [dockTab, setDockTab] = useState<DockTab>("TERMINAL");
   const [leftView, setLeftView] = useState<"FILES" | "GIT" | "AI">("FILES");
@@ -771,15 +791,17 @@ export default function Workspace() {
                 <div
                   key={f.path}
                   className={`tab ${sel === f.path ? "sel" : ""}`.trim()}
-                  onClick={() => setSel(f.path)}
+                  onClick={() => {
+                    hideTabTip();
+                    setSel(f.path);
+                  }}
+                  onMouseEnter={(e) => showTabTip(f.path, e.currentTarget)}
+                  onMouseLeave={hideTabTip}
                 >
                   <span className="tab-name">{f.path.split("/").pop()}</span>
                   {sel === f.path && dirty ? (
                     <i className="sq-dot" aria-hidden="true" title="Unsaved edits" />
                   ) : null}
-                  <span className="tab-tip" aria-hidden="true">
-                    {f.path}
-                  </span>
                   <button
                     type="button"
                     className="tab-close"
@@ -946,6 +968,12 @@ export default function Workspace() {
           </div>
         )}
       </div>
+
+      {tabTip && (
+        <div className="tab-tip" style={{ left: tabTip.left, top: 52 }}>
+          {tabTip.path}
+        </div>
+      )}
     </main>
   );
 }

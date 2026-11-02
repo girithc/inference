@@ -604,12 +604,10 @@ textarea {
   height: 48px; /* aligns the tab underline with the brand row border */
 }
 
-/* full path on hover, after 2s — replaces the native title tooltip */
+/* full path on hover, after 2s — viewport-positioned, never clipped */
 .tab-tip {
-  position: absolute;
-  top: calc(100% + 2px);
-  left: 0;
-  z-index: 40;
+  position: fixed;
+  z-index: 70;
   background: var(--ink);
   color: var(--paper);
   font-family: var(--font-mono);
@@ -617,18 +615,7 @@ textarea {
   letter-spacing: 0.04em;
   padding: 6px 10px;
   white-space: nowrap;
-  opacity: 0;
   pointer-events: none;
-}
-
-.tab:hover .tab-tip {
-  animation: tip-in 0s linear 2s forwards;
-}
-
-@keyframes tip-in {
-  to {
-    opacity: 1;
-  }
 }
 
 .tab:hover {
