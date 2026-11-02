@@ -104,6 +104,39 @@ function AiIcon() {
   );
 }
 
+type AiSection = { title: string; body: string[] };
+
+function parseAnalysis(text: string): AiSection[] {
+  const sections: AiSection[] = [];
+  let cur: AiSection | null = null;
+  for (const line of text.split("\n")) {
+    const m = line.match(/^#{1,6}\s+(.+)$/);
+    if (m) {
+      cur = { title: m[1].replace(/\*\*/g, "").trim(), body: [] };
+      sections.push(cur);
+    } else if (cur) {
+      cur.body.push(line);
+    }
+  }
+  return sections;
+}
+
+function inline(text: string): React.ReactNode[] {
+  return text
+    .split(/(\*\*[^*]+\*\*|`[^`]+`)/g)
+    .filter((p) => p !== "")
+    .map((p, i) => {
+      if (p.startsWith("**") && p.endsWith("**")) return <b key={i}>{p.slice(2, -2)}</b>;
+      if (p.startsWith("`") && p.endsWith("`"))
+        return (
+          <code key={i} className="inline-code">
+            {p.slice(1, -1)}
+          </code>
+        );
+      return <span key={i}>{p}</span>;
+    });
+}
+
 function buildTree(items: TreeItem[]): TreeNode[] {
   const root: TreeNode = { name: "", path: "", isDir: true, children: [] };
   for (const item of items) {
@@ -236,6 +269,15 @@ export default function Workspace() {
   const [testOut, setTestOut] = useState("");
   const [aiResults, setAiResults] = useState<Array<{ id: string; path: string; text: string }>>([]);
   const [aiOpenId, setAiOpenId] = useState<string | null>(null);
+  const [aiOpenSections, setAiOpenSections] = useState<Set<string>>(new Set());
+
+  const toggleSection = (key: string) =>
+    setAiOpenSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   const [aiSettings, setAiSettings] = useState({ baseUrl: "", apiKey: "", model: "" });
   const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
   const [aiSaved, setAiSaved] = useState(false);
@@ -708,7 +750,48 @@ export default function Workspace() {
                         {String(i + 1).padStart(2, "0")} — {r.path.split("/").pop()}
                       </span>
                     </button>
-                    {aiOpenId === r.id && <p className="ai-text">{r.text}</p>}
+                    {aiOpenId === r.id && (
+                      <div className="ai-text">
+                        {parseAnalysis(r.text).map((s, i) => {
+                          const key = `${r.id}-${i}`;
+                          const open = aiOpenSections.has(key);
+                          return (
+                            <div key={key} className="ai-sec">
+                              <button
+                                type="button"
+                                className="ai-sec-head"
+                                onClick={() => toggleSection(key)}
+                                aria-expanded={open}
+                              >
+                                <span
+                                  className={`caret ${open ? "open" : ""}`.trim()}
+                                  aria-hidden="true"
+                                >
+                                  {">"}
+                                </span>
+                                {s.title}
+                              </button>
+                              {open && (
+                                <div className="ai-sec-body">
+                                  {s.body.map((line, j) => {
+                                    const t2 = line.trim();
+                                    if (!t2) return null;
+                                    if (t2.startsWith("- ") || t2.startsWith("* ")) {
+                                      return (
+                                        <div key={j} className="ai-bullet">
+                                          {inline(t2.slice(2))}
+                                        </div>
+                                      );
+                                    }
+                                    return <p key={j}>{inline(t2)}</p>;
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
