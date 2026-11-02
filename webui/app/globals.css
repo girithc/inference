@@ -807,7 +807,6 @@ textarea {
 
 .dock-body {
   height: 300px;
-  border-top: 1px solid var(--ink);
   display: flex;
   flex-direction: column;
   overflow: hidden;
