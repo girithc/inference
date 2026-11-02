@@ -70,6 +70,11 @@ export function replay(): string {
   return session().buffer;
 }
 
+/** Raw scrollback — for scanning deploy output (endpoints etc). */
+export function buffer(): string {
+  return session().buffer;
+}
+
 export function subscribe(sub: (s: string) => void): () => void {
   const sess = session();
   sess.subs.add(sub);
@@ -100,7 +105,7 @@ export function interrupt(): void {
 export async function runCommand(
   command: string,
   opts: { echo?: boolean } = {},
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; code?: number; error?: string }> {
   const sess = session();
   const cmd = command.trim();
 
@@ -143,7 +148,7 @@ export async function runCommand(
           : `\r\n\x1b[2m[exit ${code ?? "?"}]\x1b[0m`,
       );
       broadcast(prompt());
-      resolve({ ok: true });
+      resolve({ ok: true, code: code ?? -1 });
     };
     child.on("close", finish);
   });

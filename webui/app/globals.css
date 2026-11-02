@@ -860,8 +860,7 @@ textarea {
 .console {
   flex: 1;
   min-height: 0;
-  background: var(--ink);
-  color: var(--paper);
+  color: var(--ink);
   font-family: var(--font-mono);
   font-size: 11px;
   line-height: 1.7;
