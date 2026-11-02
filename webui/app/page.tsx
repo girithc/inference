@@ -263,6 +263,7 @@ function TerminalPane({
       fontSize: 11.5,
       lineHeight: 1.3,
       cursorBlink: true,
+      convertEol: true, // no PTY — translate bare \n to \r\n so output isn't staircased
       theme: {
         background: "#14120f",
         foreground: "#f2efe6",
