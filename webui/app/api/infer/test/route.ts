@@ -4,25 +4,37 @@ export const dynamic = "force-dynamic";
 
 /**
  * Server-side relay: POST any JSON body to a deployed Modal endpoint.
- * Keeps the browser free of CORS problems — the request leaves from here.
+ * Handles Modal's cold-start 303 (attempt-token) dance by re-POSTing.
  */
 export async function POST(req: NextRequest) {
   try {
-    const { url, body } = (await req.json()) as { url?: string; body?: string };
+    let { url, body } = (await req.json()) as { url?: string; body?: string };
     if (!url || !/^https?:\/\//.test(url)) {
       return NextResponse.json({ error: "valid url required" }, { status: 400 });
     }
 
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: body && body.trim() ? body : undefined,
-      signal: AbortSignal.timeout(120_000),
-    });
+    let res: Response | null = null;
+    for (let attempt = 0; attempt < 6; attempt++) {
+      res = await fetch(url, {
+        method: "POST",
+        redirect: "manual",
+        headers: { "Content-Type": "application/json" },
+        body: body && body.trim() ? body : undefined,
+        signal: AbortSignal.timeout(240_000),
+      });
+      if (res.status === 303 || res.status === 307 || res.status === 302) {
+        const loc = res.headers.get("location");
+        if (loc) {
+          url = new URL(loc, url).toString();
+          continue;
+        }
+      }
+      break;
+    }
 
-    const text = await res.text();
+    const text = res ? await res.text() : "";
     return NextResponse.json(
-      { status: res.status, text: text.slice(0, 20_000) },
+      { status: res?.status ?? 0, text: text.slice(0, 20_000) },
       { status: 200 },
     );
   } catch (err) {

@@ -398,7 +398,7 @@ export default function Workspace() {
   const [following, setFollowing] = useState(false);
   const [testUrl, setTestUrl] = useState("");
   const [testBody, setTestBody] = useState(
-    '{\n  "messages": [{ "role": "user", "content": "Say hi in five words." }]\n}',
+    '{\n  "model": "Qwen/Qwen3.6-35B-A3B",\n  "messages": [{ "role": "user", "content": "Say hi in five words." }],\n  "max_tokens": 200,\n  "chat_template_kwargs": { "enable_thinking": false }\n}',
   );
   const [testOut, setTestOut] = useState("");
   const [aiResults, setAiResults] = useState<Array<{ id: string; path: string; text: string }>>([]);

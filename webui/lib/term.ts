@@ -92,18 +92,27 @@ export function interrupt(): void {
   if (!sess.child) return;
   sess.interrupted = true;
   broadcast("^C\r\n");
+  const pid = sess.child.pid;
+  if (pid === undefined) return;
+  // no TTY → SIGINT won't propagate naturally; nuke the whole process group
   try {
-    sess.child.kill("SIGINT");
+    process.kill(-pid, "SIGINT");
   } catch {
-    /* already gone */
+    /* group gone */
   }
   setTimeout(() => {
     try {
-      sess.child?.kill("SIGKILL");
+      process.kill(-pid, "SIGKILL");
     } catch {
-      /* already gone */
+      /* group gone */
     }
-  }, 1500);
+    // belt and braces: a wedged/orphaned child must never lock the session
+    if (sess.child) {
+      sess.child = null;
+      broadcast("\r\n\x1b[2m[interrupted]\x1b[0m");
+      broadcast(prompt());
+    }
+  }, 800);
 }
 
 export async function runCommand(
@@ -136,7 +145,12 @@ export async function runCommand(
   ].join(" ");
 
   return new Promise((resolve) => {
-    const child = spawn("bash", ["-c", wrapper], { cwd: REPO_ROOT, env: process.env });
+    // detached → own process group, so an interrupt can kill grandchildren too
+    const child = spawn("bash", ["-c", wrapper], {
+      cwd: REPO_ROOT,
+      env: process.env,
+      detached: true,
+    });
     sess.child = child;
     const push = (chunk: Buffer) => broadcast(chunk.toString());
     child.stdout.on("data", push);
@@ -154,6 +168,8 @@ export async function runCommand(
       broadcast(prompt());
       resolve({ ok: true, code: code ?? -1 });
     };
-    child.on("close", finish);
+    // 'exit' fires when the process dies; 'close' would wait on orphaned
+    // grandchildren holding the stdio pipes
+    child.on("exit", finish);
   });
 }
