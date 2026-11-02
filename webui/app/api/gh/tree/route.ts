@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getRepo, gh } from "@/lib/server";
+import { getRepo, gh, APP_PREFIX } from "@/lib/server";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +21,7 @@ export async function GET() {
       .filter(
         (t) =>
           t.type === "blob" &&
+          !t.path.startsWith(APP_PREFIX) &&
           !HIDDEN.some((h) => t.path.includes(h)) &&
           (KEEP_EXT.test(t.path) || t.path === ".gitignore"),
       )

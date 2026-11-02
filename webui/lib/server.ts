@@ -6,6 +6,9 @@ import { DatabaseSync } from "node:sqlite";
 /** The Next server runs from webui/ — the repo root is one level up. */
 export const REPO_ROOT = path.resolve(process.cwd(), "..");
 
+/** The studio app itself lives here — the editor is scoped to inference code. */
+export const APP_PREFIX = "webui/";
+
 let db: DatabaseSync | null = null;
 
 /** SQLite at webui/data/studio.db — persistent app settings. */

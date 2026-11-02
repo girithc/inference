@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { execFile } from "node:child_process";
-import { REPO_ROOT } from "@/lib/server";
+import { REPO_ROOT, APP_PREFIX } from "@/lib/server";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +20,8 @@ export async function GET() {
     const entries = out
       .split("\n")
       .filter((l) => l.trim().length > 0)
-      .map((l) => ({ code: l.slice(0, 2), path: l.slice(3).trim() }));
+      .map((l) => ({ code: l.slice(0, 2), path: l.slice(3).trim() }))
+      .filter((e) => !e.path.startsWith(APP_PREFIX));
     return NextResponse.json({ entries });
   } catch (err) {
     return NextResponse.json(
