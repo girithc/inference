@@ -445,8 +445,23 @@ textarea {
   flex: none;
 }
 
-.ai-actions .btn-mini:first-child {
+.ai-actions .btn-mini {
   flex: 1;
+}
+
+.ai-live {
+  flex: none;
+  max-height: 170px;
+  overflow: auto;
+  background: var(--paper-dim);
+  padding: 8px 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  margin: 0;
 }
 
 .ai-settings {

@@ -408,6 +408,13 @@ export default function Workspace() {
     Array<{ id: string; folder: string; files: Array<{ path: string; action: string }>; commit?: string }>
   >([]);
   const [restructureOpenId, setRestructureOpenId] = useState<string | null>(null);
+  const [restructureLog, setRestructureLog] = useState("");
+  const liveLogRef = useRef<HTMLPreElement>(null);
+
+  useEffect(() => {
+    const el = liveLogRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [restructureLog]);
 
   const toggleSection = (key: string) =>
     setAiOpenSections((prev) => {
@@ -745,38 +752,70 @@ export default function Workspace() {
     const folder = sel.split("/").slice(0, -1).join("/");
     if (!folder) return;
     setBusy("restructure");
+    setRestructureLog(`✳ restructuring ${folder}…`);
     try {
       const res = await fetch("/api/ai/restructure", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ folder }),
       });
-      const data = await res.json();
-      if (data.error && !data.files) {
-        setSysLine(`RESTRUCTURE ERROR — ${data.error}`);
-        return;
-      }
-      const id = `${Date.now()}`;
-      setRestructures((prev) => [
-        { id, folder, files: data.files ?? [], commit: data.commit },
-        ...prev,
-      ]);
-      setRestructureOpenId(id);
-      setSysLine(
-        data.error ? `RESTRUCTURE — files written, push failed` : `RESTRUCTURED ✓ — ${folder}`,
-      );
-      // resync every open file that the restructure may have rewritten
-      await refreshTree();
-      for (const f of openFiles.filter((o) => o.path.startsWith(`${folder}/`))) {
-        if (f.draft !== f.saved) continue; // never clobber unsaved edits
-        const r = await fetch(`/api/gh/file?path=${encodeURIComponent(f.path)}`);
-        const d = await r.json();
-        if (!d.error) {
-          setOpenFiles((prev) =>
-            prev.map((o) =>
-              o.path === f.path ? { ...o, sha: d.sha, saved: d.content, draft: d.content } : o,
-            ),
-          );
+      const reader = res.body!.getReader();
+      const dec = new TextDecoder();
+      let buf = "";
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const frames = buf.split("\n\n");
+        buf = frames.pop() ?? "";
+        for (const frame of frames) {
+          const l = frame.trim();
+          if (!l.startsWith("data:")) continue;
+          let o: {
+            t?: string;
+            m?: string;
+            d?: string;
+            folder?: string;
+            files?: Array<{ path: string; action: string }>;
+            commit?: string;
+          };
+          try {
+            o = JSON.parse(l.slice(5));
+          } catch {
+            continue;
+          }
+          if (o.t === "s") {
+            setRestructureLog((l2) => `${l2}\n✳ ${o.m}`);
+          } else if (o.t === "c") {
+            setRestructureLog((l2) => l2 + (o.d ?? ""));
+          } else if (o.t === "err") {
+            setRestructureLog((l2) => `${l2}\n✗ ${o.m}`);
+            setSysLine(`RESTRUCTURE ERROR — ${o.m}`);
+          } else if (o.t === "done") {
+            const id = `${Date.now()}`;
+            setRestructures((prev) => [
+              { id, folder: o.folder ?? folder, files: o.files ?? [], commit: o.commit },
+              ...prev,
+            ]);
+            setRestructureOpenId(id);
+            setSysLine(o.commit ? `RESTRUCTURED ✓ — commit ${o.commit}` : `RESTRUCTURED ✓ — ${folder}`);
+            // resync every open file the restructure may have rewritten
+            await refreshTree();
+            for (const f of openFiles.filter((x) => x.path.startsWith(`${folder}/`))) {
+              if (f.draft !== f.saved) continue; // never clobber unsaved edits
+              const r = await fetch(`/api/gh/file?path=${encodeURIComponent(f.path)}`);
+              const d = await r.json();
+              if (!d.error) {
+                setOpenFiles((prev) =>
+                  prev.map((x) =>
+                    x.path === f.path
+                      ? { ...x, sha: d.sha, saved: d.content, draft: d.content }
+                      : x,
+                  ),
+                );
+              }
+            }
+          }
         }
       }
     } catch (err) {
@@ -893,6 +932,11 @@ export default function Workspace() {
                   <GearIcon />
                 </button>
               </div>
+              {busy === "restructure" || restructureLog ? (
+                <pre className="ai-live" ref={liveLogRef}>
+                  {restructureLog}
+                </pre>
+              ) : null}
               {aiSettingsOpen && (
                 <div className="ai-settings">
                   <label className="ai-set-label">
