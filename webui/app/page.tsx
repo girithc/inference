@@ -7,6 +7,9 @@ import { EditorView } from "@codemirror/view";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { autocompletion } from "@codemirror/autocomplete";
 import { tags as t } from "@lezer/highlight";
+import { Terminal } from "@xterm/xterm";
+import { FitAddon } from "@xterm/addon-fit";
+import "@xterm/xterm/css/xterm.css";
 
 /* VS Code "Light+" token colors on bone paper */
 const vscodeTheme = EditorView.theme(
@@ -247,6 +250,133 @@ function GearIcon() {
   );
 }
 
+function TerminalPane({
+  onEndpoints,
+}: {
+  onEndpoints: (urls: string[]) => void;
+}) {
+  const host = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const term = new Terminal({
+      fontFamily: '"IBM Plex Mono", ui-monospace, Menlo, monospace',
+      fontSize: 11.5,
+      lineHeight: 1.3,
+      cursorBlink: true,
+      theme: {
+        background: "#14120f",
+        foreground: "#f2efe6",
+        cursor: "#ff4d00",
+        selectionBackground: "rgba(255, 77, 0, 0.35)",
+      },
+    });
+    const fit = new FitAddon();
+    term.loadAddon(fit);
+    if (host.current) term.open(host.current);
+    try {
+      fit.fit();
+    } catch {
+      /* not laid out yet */
+    }
+
+    let line = "";
+    let tail = "";
+    const history: string[] = [];
+    let histIdx = 0;
+
+    const runLine = async (cmd: string) => {
+      try {
+        const res = await fetch("/api/term/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ command: cmd }),
+        });
+        const d = await res.json();
+        if (d.error) {
+          term.write(`\r\n\x1b[38;2;255;77;0m${d.error}\x1b[0m`);
+        }
+      } catch {
+        /* ignore */
+      }
+    };
+
+    term.onData((d) => {
+      if (d === "\r") {
+        term.write("\r\n");
+        const cmd = line.trim();
+        line = "";
+        if (cmd) {
+          history.push(cmd);
+          histIdx = history.length;
+          void runLine(cmd);
+        }
+        return;
+      }
+      if (d === "\x7f") {
+        if (line.length > 0) {
+          line = line.slice(0, -1);
+          term.write("\b \b");
+        }
+        return;
+      }
+      if (d === "\x03") {
+        term.write("^C");
+        line = "";
+        void fetch("/api/term/kill", { method: "POST" });
+        return;
+      }
+      if (d === "\x1b[A" || d === "\x1b[B") {
+        if (history.length === 0) return;
+        histIdx =
+          d === "\x1b[A"
+            ? Math.max(0, histIdx - 1)
+            : Math.min(history.length, histIdx + 1);
+        const entry = history[histIdx] ?? "";
+        term.write(`\x1b[2K\r${entry}`);
+        line = entry;
+        return;
+      }
+      if (d === "\x1b[C" || d === "\x1b[D") return;
+      if (d >= " " || d === "\t") {
+        line += d;
+        term.write(d);
+      }
+    });
+
+    const es = new EventSource("/api/term/stream");
+    es.onmessage = (e) => {
+      let out = "";
+      try {
+        out = JSON.parse(e.data) as string;
+      } catch {
+        return;
+      }
+      term.write(out);
+      tail = (tail + out).slice(-400);
+      const urls = tail.match(/https:\/\/[^\s"']+\.modal\.run/g);
+      if (urls?.length) onEndpoints(urls);
+    };
+
+    const doFit = () => {
+      try {
+        fit.fit();
+      } catch {
+        /* too small */
+      }
+    };
+    window.addEventListener("resize", doFit);
+    doFit();
+
+    return () => {
+      es.close();
+      window.removeEventListener("resize", doFit);
+      term.dispose();
+    };
+  }, []);
+
+  return <div className="term-host" ref={host} />;
+}
+
 export default function Workspace() {
   const [repo, setRepo] = useState("");
   const [tree, setTree] = useState<TreeItem[]>([]);
@@ -256,8 +386,8 @@ export default function Workspace() {
     Array<{ path: string; sha: string; saved: string; draft: string }>
   >([]);
   const [busy, setBusy] = useState<string | null>(null);
-  const [deploying, setDeploying] = useState(false);
-  const [deployOut, setDeployOut] = useState("");
+  const [sysLine, setSysLine] = useState("");
+  const [termBusy, setTermBusy] = useState(false);
   const [endpoints, setEndpoints] = useState<string[]>([]);
   const [logApp, setLogApp] = useState("");
   const [logLines, setLogLines] = useState<string[]>([]);
@@ -386,6 +516,24 @@ export default function Workspace() {
     refreshTree();
   }, [refreshTree]);
 
+  const handleEndpoints = useCallback((urls: string[]) => {
+    setEndpoints((prev) => {
+      const set = new Set([...prev, ...urls]);
+      return [...set].slice(-6);
+    });
+  }, []);
+
+  const deployInTerminal = async () => {
+    if (!sel) return;
+    setDockOpen(true);
+    setDockTab("TERMINAL");
+    await fetch("/api/term/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ command: `modal deploy ${sel}`, echo: true }),
+    });
+  };
+
   const openFile = async (path: string) => {
     if (openFiles.some((f) => f.path === path)) {
       setSel(path);
@@ -403,7 +551,7 @@ export default function Workspace() {
       ]);
       setSel(path);
     } catch (err) {
-      setDeployOut(`[OPEN ERROR] ${err instanceof Error ? err.message : "failed"}\n`);
+      setSysLine(`OPEN ERROR — ${err instanceof Error ? err.message : "failed"}`);
     } finally {
       setBusy(null);
     }
@@ -429,7 +577,7 @@ export default function Workspace() {
       if (data.error) throw new Error(data.error);
       setGitEntries(data.entries);
     } catch (err) {
-      setDeployOut(`[GIT ERROR] ${err instanceof Error ? err.message : "failed"}\n`);
+      setSysLine(`GIT ERROR — ${err instanceof Error ? err.message : "failed"}`);
       setDockOpen(true);
       setDockTab("TERMINAL");
     } finally {
@@ -440,15 +588,11 @@ export default function Workspace() {
   const commitAll = async () => {
     if (gitBusy) return;
     setGitBusy("push");
-    setDockOpen(true);
-    setDockTab("TERMINAL");
-    setDeployOut((d) => `${d}\n$ git add -A · commit · pull --rebase · push\n`);
+    setSysLine("PUSHING — git add · commit · pull --rebase · push");
     try {
       const res = await fetch("/api/git/push", { method: "POST" });
       const data = await res.json();
-      setDeployOut(
-        (d) => `${d}${data.output ?? ""}${data.error ? `\n[ERROR] ${data.error}` : "\n[PUSHED ✓]"}`,
-      );
+      setSysLine(data.error ? `PUSH ERROR — ${data.error}` : "PUSHED ✓");
       await loadGit();
       await refreshTree();
       // resync the open file's sha after the rebase — but never clobber unsaved edits
@@ -464,43 +608,9 @@ export default function Workspace() {
         }
       }
     } catch (err) {
-      setDeployOut((d) => `${d}[PUSH ERROR] ${err instanceof Error ? err.message : "failed"}\n`);
+      setSysLine(`PUSH ERROR — ${err instanceof Error ? err.message : "failed"}`);
     } finally {
       setGitBusy(null);
-    }
-  };
-
-  const deploy = async () => {
-    if (!sel || deploying) return;
-    setDeploying(true);
-    setDockOpen(true);
-    setDockTab("TERMINAL");
-    await flushWrite(); // deploy exactly what the editor shows
-    setDeployOut(`$ modal deploy ${sel}\n`);
-    try {
-      const res = await fetch("/api/modal/deploy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path: sel, content: draft }),
-      });
-      const reader = res.body!.getReader();
-      const dec = new TextDecoder();
-      let acc = "";
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        acc += dec.decode(value, { stream: true });
-        setDeployOut(acc);
-      }
-      const urls = [...new Set(acc.match(/https:\/\/[^\s"']+\.modal\.run/g) ?? [])];
-      if (urls.length) {
-        setEndpoints(urls);
-        setTestUrl((u) => u || urls[0]);
-      }
-      const app = acc.match(/[Aa]pp '([^']+)'/)?.[1];
-      if (app) setLogApp(app);
-    } finally {
-      setDeploying(false);
     }
   };
 
@@ -947,7 +1057,7 @@ export default function Workspace() {
               }}
             >
               {t}
-              {t === "TERMINAL" && deploying ? " — RUNNING" : ""}
+              {t === "TERMINAL" && termBusy ? " — BUSY" : ""}
               {t === "LOGS" && following ? " — LIVE" : ""}
             </button>
           ))}
@@ -965,12 +1075,20 @@ export default function Workspace() {
                   <button
                     type="button"
                     className="btn btn-mini"
-                    onClick={deploy}
-                    disabled={!sel || deploying}
+                    onClick={deployInTerminal}
+                    disabled={!sel || termBusy}
                   >
-                    {deploying ? "DEPLOYING…" : "MODAL DEPLOY ↗"}
+                    {termBusy ? "BUSY…" : "MODAL DEPLOY ↗"}
                   </button>
-                  <span className="field-note">{sel ?? "NO FILE SELECTED"}</span>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-mini"
+                    onClick={() => fetch("/api/term/kill", { method: "POST" })}
+                    disabled={!termBusy}
+                  >
+                    INTERRUPT
+                  </button>
+                  {sysLine ? <span className="field-note">{sysLine}</span> : null}
                 </div>
                 {endpoints.length > 0 && (
                   <div className="dock-eps">
@@ -988,7 +1106,9 @@ export default function Workspace() {
                     ))}
                   </div>
                 )}
-                <pre className="console">{deployOut || "$ —"}</pre>
+                <div className="term-host-wrap">
+                  <TerminalPane onEndpoints={handleEndpoints} />
+                </div>
               </>
             )}
 

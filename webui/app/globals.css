@@ -846,6 +846,20 @@ textarea {
   flex: none;
 }
 
+.term-host-wrap {
+  flex: 1;
+  min-height: 0;
+  margin: 10px 16px;
+  border: 1px solid var(--ink);
+  background: #14120f;
+}
+
+.term-host {
+  width: 100%;
+  height: 100%;
+  padding: 6px 8px;
+}
+
 .console {
   flex: 1;
   min-height: 0;
