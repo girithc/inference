@@ -774,6 +774,9 @@ export default function Workspace() {
                   onClick={() => setSel(f.path)}
                 >
                   <span className="tab-name">{f.path.split("/").pop()}</span>
+                  {sel === f.path && dirty ? (
+                    <i className="sq-dot" aria-hidden="true" title="Unsaved edits" />
+                  ) : null}
                   <span className="tab-tip" aria-hidden="true">
                     {f.path}
                   </span>
@@ -792,15 +795,6 @@ export default function Workspace() {
               ))}
             </div>
           )}
-          <div className="pane-head">
-            <span>{sel ?? "OPEN A FILE FROM THE REPO"}</span>
-            {sel ? (
-              <span className={`ws-state ${dirty ? "orange-text" : ""}`.trim()}>
-                <i className={`sq-dot ${dirty ? "" : "sq-ink"}`.trim()} aria-hidden="true" />
-                {dirty ? "UNSAVED" : "SYNCED"}
-              </span>
-            ) : null}
-          </div>
           {sel ? (
             <div className="editor-wrap">
               <CodeMirror
