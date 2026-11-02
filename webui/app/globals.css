@@ -561,6 +561,21 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.ai-file-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.ai-file-name {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* files — full height column */
 
 .ws-files {

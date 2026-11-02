@@ -404,6 +404,10 @@ export default function Workspace() {
   const [aiResults, setAiResults] = useState<Array<{ id: string; path: string; text: string }>>([]);
   const [aiOpenId, setAiOpenId] = useState<string | null>(null);
   const [aiOpenSections, setAiOpenSections] = useState<Set<string>>(new Set());
+  const [restructures, setRestructures] = useState<
+    Array<{ id: string; folder: string; files: Array<{ path: string; action: string }>; commit?: string }>
+  >([]);
+  const [restructureOpenId, setRestructureOpenId] = useState<string | null>(null);
 
   const toggleSection = (key: string) =>
     setAiOpenSections((prev) => {
@@ -736,6 +740,52 @@ export default function Workspace() {
     }
   };
 
+  const restructureFolder = async () => {
+    if (!sel || busy === "restructure") return;
+    const folder = sel.split("/").slice(0, -1).join("/");
+    if (!folder) return;
+    setBusy("restructure");
+    try {
+      const res = await fetch("/api/ai/restructure", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ folder }),
+      });
+      const data = await res.json();
+      if (data.error && !data.files) {
+        setSysLine(`RESTRUCTURE ERROR — ${data.error}`);
+        return;
+      }
+      const id = `${Date.now()}`;
+      setRestructures((prev) => [
+        { id, folder, files: data.files ?? [], commit: data.commit },
+        ...prev,
+      ]);
+      setRestructureOpenId(id);
+      setSysLine(
+        data.error ? `RESTRUCTURE — files written, push failed` : `RESTRUCTURED ✓ — ${folder}`,
+      );
+      // resync every open file that the restructure may have rewritten
+      await refreshTree();
+      for (const f of openFiles.filter((o) => o.path.startsWith(`${folder}/`))) {
+        if (f.draft !== f.saved) continue; // never clobber unsaved edits
+        const r = await fetch(`/api/gh/file?path=${encodeURIComponent(f.path)}`);
+        const d = await r.json();
+        if (!d.error) {
+          setOpenFiles((prev) =>
+            prev.map((o) =>
+              o.path === f.path ? { ...o, sha: d.sha, saved: d.content, draft: d.content } : o,
+            ),
+          );
+        }
+      }
+    } catch (err) {
+      setSysLine(`RESTRUCTURE ERROR — ${err instanceof Error ? err.message : "failed"}`);
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const analyze = async () => {
     if (!sel || busy === "ai") return;
     setBusy("ai");
@@ -826,6 +876,15 @@ export default function Workspace() {
                 </button>
                 <button
                   type="button"
+                  className="btn btn-mini"
+                  onClick={restructureFolder}
+                  disabled={!sel || busy === "restructure"}
+                  title={`Split ${sel?.split("/").slice(0, -1).join("/") || "folder"} into per-concern files`}
+                >
+                  {busy === "restructure" ? "RESTRUCTURING…" : "RESTRUCTURE"}
+                </button>
+                <button
+                  type="button"
                   className={`btn btn-mini ${aiSettingsOpen ? "" : "btn-ghost"}`.trim()}
                   onClick={() => setAiSettingsOpen((v) => !v)}
                   aria-label="AI settings"
@@ -878,6 +937,44 @@ export default function Workspace() {
                 </div>
               )}
               <div className="ai-list">
+                {restructures.map((r, i) => (
+                  <div key={r.id} className="ai-item">
+                    <button
+                      type="button"
+                      className="file-item ai-row"
+                      style={{ paddingLeft: 10 }}
+                      onClick={() => setRestructureOpenId(restructureOpenId === r.id ? null : r.id)}
+                      aria-expanded={restructureOpenId === r.id}
+                    >
+                      <span
+                        className={`caret ${restructureOpenId === r.id ? "open" : ""}`.trim()}
+                        aria-hidden="true"
+                      >
+                        {">"}
+                      </span>
+                      <span className="ai-row-label">
+                        R{String(restructures.length - i).padStart(2, "0")} — {r.folder}
+                      </span>
+                    </button>
+                    {restructureOpenId === r.id && (
+                      <div className="ai-text">
+                        {r.files.map((f) => (
+                          <div key={f.path} className="ai-file-row">
+                            <span className={`sc-letter sc-${f.action === "DELETED" ? "D" : "M"}`}>
+                              {f.action === "DELETED" ? "D" : f.action === "UPDATED" ? "U" : "A"}
+                            </span>
+                            <span className="ai-file-name">{f.path}</span>
+                          </div>
+                        ))}
+                        {r.commit ? (
+                          <p className="field-note" style={{ marginTop: 8 }}>
+                            COMMIT {r.commit}
+                          </p>
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
+                ))}
                 {aiResults.map((r, i) => (
                   <div key={r.id} className="ai-item">
                     <button
