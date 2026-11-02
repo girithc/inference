@@ -621,8 +621,7 @@ export default function Workspace() {
 
   return (
     <main className="app">
-      <div className="ws">
-        {/* ---------------- files ---------------- */}
+      {/* ---------------- files ---------------- */}
         <aside className="ws-files">
           <div className="pane-head">
             <span className="brand">
@@ -930,11 +929,9 @@ export default function Workspace() {
               SELECT A FILE — EDIT — DEPLOY — WATCH LOGS
             </div>
           )}
-        </section>
-      </div>
 
-      {/* ---------------- dock ---------------- */}
-      <div className="dock">
+          {/* ---------------- dock ---------------- */}
+          <div className="dock">
         <div className="dock-bar">
           {dockTabs.map((t) => (
             <button
@@ -1050,7 +1047,8 @@ export default function Workspace() {
             )}
           </div>
         )}
-      </div>
+        </div>
+      </section>
 
       {tabTip && (
         <div className="tab-tip" style={{ left: tabTip.left, top: 52 }}>
