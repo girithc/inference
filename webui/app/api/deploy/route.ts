@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import path from "node:path";
 import { findDeployables, endpointsFrom } from "@/lib/deploy";
 import { runCommand, isBusy, buffer } from "@/lib/term";
-import { getDb } from "@/lib/server";
+import { getDb, REPO_ROOT } from "@/lib/server";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 3600;
@@ -39,7 +40,10 @@ export async function POST(req: NextRequest) {
       .run(deployable.folder, deployable.entry, started);
     const id = Number(ins.lastInsertRowid);
 
-    const result = await runCommand(`modal deploy ${deployable.entry}`, { echo: true });
+    // absolute path — the session cwd may be anywhere
+    const result = await runCommand(`modal deploy ${path.join(REPO_ROOT, deployable.entry)}`, {
+      echo: true,
+    });
 
     const code = result.code ?? -1;
     const endpoints = endpointsFrom(buffer().slice(-20_000));
