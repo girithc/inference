@@ -587,6 +587,7 @@ textarea {
 }
 
 .tab {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -601,6 +602,33 @@ textarea {
   white-space: nowrap;
   flex: none;
   height: 38px;
+}
+
+/* full path on hover, after 2s — replaces the native title tooltip */
+.tab-tip {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  z-index: 40;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  padding: 6px 10px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tab:hover .tab-tip {
+  animation: tip-in 0s linear 2s forwards;
+}
+
+@keyframes tip-in {
+  to {
+    opacity: 1;
+  }
 }
 
 .tab:hover {

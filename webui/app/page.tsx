@@ -772,9 +772,11 @@ export default function Workspace() {
                   key={f.path}
                   className={`tab ${sel === f.path ? "sel" : ""}`.trim()}
                   onClick={() => setSel(f.path)}
-                  title={f.path}
                 >
                   <span className="tab-name">{f.path.split("/").pop()}</span>
+                  <span className="tab-tip" aria-hidden="true">
+                    {f.path}
+                  </span>
                   <button
                     type="button"
                     className="tab-close"
