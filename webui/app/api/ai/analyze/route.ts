@@ -47,7 +47,9 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         model,
         temperature: 0.2,
-        max_tokens: 1024,
+        // glm/deepseek-class routers spend tokens thinking first — give the
+        // answer room so it doesn't stop mid-sentence
+        max_tokens: 4096,
         messages: [
           { role: "system", content: SYSTEM },
           {
