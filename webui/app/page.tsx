@@ -265,10 +265,11 @@ function TerminalPane({
       cursorBlink: true,
       convertEol: true, // no PTY — translate bare \n to \r\n so output isn't staircased
       theme: {
-        background: "#14120f",
-        foreground: "#f2efe6",
+        background: "#f2efe6",
+        foreground: "#14120f",
         cursor: "#ff4d00",
-        selectionBackground: "rgba(255, 77, 0, 0.35)",
+        cursorAccent: "#f2efe6",
+        selectionBackground: "rgba(255, 77, 0, 0.25)",
       },
     });
     const fit = new FitAddon();
