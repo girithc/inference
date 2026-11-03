@@ -9,10 +9,12 @@ Serving open models on Modal. One-command GPU deployments for:
 - Qwen/Qwen3.8-27B — chat
 - WarmBloodAban/Minimax-h3_Singularity — image to video
 
-## Web playground
+## Web canvas
 
-## Web playground
-
-A Next.js TypeScript web UI is available in [`webui/`](./webui/README.md) with four views: **inference** (a rate-sheet catalog of small LLMs), **post-training** (fine-tuning jobs on a live ledger), a **playground** (single / A·B quality testing with real metrics), and a **stack** composer (engine, quantization, kernels — with estimates and a generated config). Print-inspired editorial theme: bone paper / ink / international orange, sharp edges, no radius.
-
-Work in progress — I'm building it out piece by piece. Check back soon.
+A Next.js TypeScript web UI in [`webui/`](./webui/README.md) — a canvas over the
+deployed models, not an editor: **bench** deployments under load (TTFT
+percentiles, token throughput, A/B comparison), an **OCR** view (drop a
+document, stream the transcription), a **reason** chat canvas (thinking blocks
+separated from answers, live tokens/s), and a **speech** view (STT + TTS,
+OpenAI-compatible). Deployments are registered in-app with base URL + model +
+optional key; all requests proxy through the Next server.

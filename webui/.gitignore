@@ -9,3 +9,6 @@ Fundraising Deck.pdf
 
 # secrets
 .env*.local
+
+# endpoint registry — may contain api keys
+/data
